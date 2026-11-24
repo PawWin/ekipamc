@@ -10,7 +10,7 @@ mod avatar;
 
 use slint::platform::software_renderer::{MinimalSoftwareWindow, RepaintBufferType};
 use slint::platform::{Platform, WindowAdapter};
-use slint::{ComponentHandle, PhysicalSize, PlatformError};
+use slint::{ComponentHandle, ModelRc, PhysicalSize, PlatformError, VecModel};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::rc::Rc;
@@ -68,12 +68,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         store.set_page(Page::Installations)
     })?;
     shoot("05-edit-installation", &|store| {
-        store.set_page(Page::Edit);
-        let mut profile = store.get_profile();
-        profile.width = 1920;
-        profile.height = 1080;
-        profile.jvm_args = "-XX:+UseZGC".into();
-        store.set_profile(profile);
+        store.invoke_edit_installation(0);
+        let mut draft = store.get_draft();
+        draft.width = 1920;
+        draft.height = 1080;
+        draft.jvm_args = "-XX:+UseZGC".into();
+        store.set_draft(draft);
+    })?;
+    shoot("05b-new-installation", &|store| {
+        store.invoke_new_installation()
     })?;
     shoot("06-settings", &|store| store.set_page(Page::Settings))?;
     shoot("07-running", &|store| store.set_screen(Screen::Running))?;
@@ -88,21 +91,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// The state a returning player sees: installed, nick set, default profile.
+/// The state a returning player sees: installed, nick set, the default
+/// installation selected and a second one for the other pack.
 fn fill(store: &Store) {
     store.set_launcher_name("EkipaMC".into());
-    store.set_pack_subtitle("All the Mods 10".into());
-    store.set_pack_version("8.6".into());
-    store.set_minecraft("1.21.1".into());
-    store.set_neoforge("21.1.266".into());
     store.set_launcher_version(env!("CARGO_PKG_VERSION").into());
-    store.set_game_dir("~/.local/share/ekipamc/instance".into());
-    store.set_default_game_dir("~/.local/share/ekipamc/instance".into());
+    let packs = [
+        PackInfo {
+            name: "All the Mods 10".into(),
+            label: "All the Mods 10 8.6".into(),
+            version: "8.6".into(),
+            minecraft: "1.21.1".into(),
+            neoforge: "21.1.266".into(),
+            game_dir: "~/.local/share/ekipamc/instances/atm10".into(),
+        },
+        PackInfo {
+            name: "All the Mods 11".into(),
+            label: "All the Mods 11 0.15.0-beta".into(),
+            version: "0.15.0-beta".into(),
+            minecraft: "26.1.2".into(),
+            neoforge: "26.1.2.126".into(),
+            game_dir: "~/.local/share/ekipamc/instances/atm11".into(),
+        },
+    ];
+    store.set_packs(ModelRc::new(VecModel::from(packs.to_vec())));
+    store.set_game_dir(packs[0].game_dir.clone());
     store.set_min_ram_gb(4);
     store.set_max_ram_gb(16);
     store.set_screen(Screen::Ready);
-    store.set_profile(Profile {
+    let profile = Profile {
         name: "EkipaCraft".into(),
+        pack: 0,
         ram_gb: 8,
         width: 0,
         height: 0,
@@ -110,7 +129,15 @@ fn fill(store: &Store) {
         jvm_args: "".into(),
         java_path: "".into(),
         game_dir: "".into(),
-    });
+    };
+    let second = Profile {
+        name: "All the Mods 11".into(),
+        pack: 1,
+        ..profile.clone()
+    };
+    store.set_profiles(ModelRc::new(VecModel::from(vec![profile.clone(), second])));
+    store.set_selected(0);
+    store.set_profile(profile);
     store.set_options(LauncherOptions {
         keep_open: true,
         open_log: false,

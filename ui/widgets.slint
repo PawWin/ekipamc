@@ -272,7 +272,55 @@ export component Slider inherits Rectangle {
     }
 }
 
-// Small outlined label, e.g. "DEFAULT". Kept dark so the green Play button
+// One option of a pick-one list, e.g. a modpack: title plus a muted line.
+export component Choice inherits Rectangle {
+    in property <string> title;
+    in property <string> detail;
+    in property <bool> selected;
+    callback clicked;
+
+    min-height: 56px;
+    border-radius: 3px;
+    background: root.selected ? Theme.selected : touch.has-hover ? Theme.card-hover : Theme.card;
+    border-width: 2px;
+    border-color: root.selected ? Theme.green-text : transparent;
+    animate background { duration: 100ms; }
+
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        spacing: 12px;
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            Text {
+                text: root.title;
+                color: Theme.text;
+                font-size: 14px;
+                font-weight: 700;
+                overflow: elide;
+            }
+            Text {
+                text: root.detail;
+                color: Theme.text-dim;
+                font-size: 12px;
+                overflow: elide;
+            }
+        }
+        if root.selected: Icon {
+            outline: Icons.check;
+            color: Theme.green-text;
+            y: (parent.height - self.height) / 2;
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+// Small outlined label, e.g. "SELECTED". Kept dark so the green Play button
 // stays the only bright green on screen.
 export component Badge inherits Rectangle {
     in property <string> text;

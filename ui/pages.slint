@@ -2,8 +2,8 @@
 
 import { ScrollView } from "std-widgets.slint";
 import { Theme, Icons } from "theme.slint";
-import { Store, Screen, Page, Profile, LauncherOptions } from "store.slint";
-import { Icon, Caption, Hint, Button, TextField, CheckBox, Slider, Badge } from "widgets.slint";
+import { Store, Screen, Page, PackInfo, Profile, LauncherOptions } from "store.slint";
+import { Icon, Caption, Hint, Button, TextField, CheckBox, Slider, Badge, Choice } from "widgets.slint";
 
 export component PlayPage inherits Rectangle {
     background: #10151f;
@@ -44,7 +44,7 @@ export component PlayPage inherits Rectangle {
         HorizontalLayout {
             alignment: start;
             Badge {
-                text: Store.pack-version == "" ? "MODPACK" : "MODPACK " + Store.pack-version;
+                text: Store.pack.version == "" ? "MODPACK" : "MODPACK " + Store.pack.version;
             }
         }
         // Pixel title with a hard drop shadow, like Minecraft's own text.
@@ -74,7 +74,7 @@ export component PlayPage inherits Rectangle {
             blurb := Text {
                 x: 0;
                 width: min(parent.width, 560px);
-                text: Store.pack-subtitle + "  ·  Minecraft " + Store.minecraft;
+                text: Store.pack.name + "  ·  Minecraft " + Store.pack.minecraft;
                 color: #e6e6e6;
                 font-size: 15px;
                 wrap: word-wrap;
@@ -84,13 +84,28 @@ export component PlayPage inherits Rectangle {
 }
 
 component InstallationRow inherits Rectangle {
+    in property <Profile> profile;
+    in property <int> index;
+    property <bool> selected: root.index == Store.selected;
+    property <PackInfo> pack: Store.packs[root.profile.pack];
+
     min-height: 88px;
     border-radius: 4px;
     background: touch.has-hover ? Theme.card-hover : Theme.card;
     animate background { duration: 100ms; }
 
     touch := TouchArea {
-        double-clicked => { Store.page = Page.edit; }
+        double-clicked => {
+            if Store.screen != Screen.running { Store.edit-installation(root.index); }
+        }
+    }
+
+    // Same accent as the selected game in the sidebar.
+    if root.selected: Rectangle {
+        x: 0;
+        width: 3px;
+        height: 60%;
+        background: Theme.green-text;
     }
 
     HorizontalLayout {
@@ -109,30 +124,30 @@ component InstallationRow inherits Rectangle {
                 spacing: 10px;
                 alignment: start;
                 Text {
-                    text: Store.profile.name;
+                    text: root.profile.name;
                     color: Theme.text;
                     font-size: 16px;
                     font-weight: 700;
                     vertical-alignment: center;
                 }
-                VerticalLayout {
+                if root.selected: VerticalLayout {
                     alignment: center;
                     Badge {
-                        text: "DEFAULT";
+                        text: "SELECTED";
                     }
                 }
             }
             Text {
-                text: Store.pack-label + "  ·  Minecraft " + Store.minecraft + "  ·  NeoForge " + Store.neoforge;
+                text: root.pack.label + "  ·  Minecraft " + root.pack.minecraft + "  ·  NeoForge " + root.pack.neoforge;
                 color: Theme.text-muted;
                 font-size: 13px;
             }
             Text {
-                text: Store.profile.ram-gb + " GB memory  ·  "
-                    + (Store.profile.fullscreen ? "Fullscreen"
-                        : Store.profile.width > 0 && Store.profile.height > 0 ? Store.profile.width + " × " + Store.profile.height
+                text: root.profile.ram-gb + " GB memory  ·  "
+                    + (root.profile.fullscreen ? "Fullscreen"
+                        : root.profile.width > 0 && root.profile.height > 0 ? root.profile.width + " × " + root.profile.height
                         : "Default window size")
-                    + "  ·  " + (Store.profile.java-path == "" ? "Bundled Java" : "Custom Java");
+                    + "  ·  " + (root.profile.java-path == "" ? "Bundled Java" : "Custom Java");
                 color: Theme.text-dim;
                 font-size: 12px;
             }
@@ -142,21 +157,30 @@ component InstallationRow inherits Rectangle {
             alignment: end;
             padding-top: 9px;
             padding-bottom: 9px;
-            Button {
+            if root.selected: Button {
                 text: Store.screen == Screen.installing ? "Installing…" : Store.screen == Screen.running ? "Playing" : "Play";
                 primary: true;
                 enabled: Store.screen == Screen.ready;
                 clicked => { Store.start-game(); }
             }
+            // Selecting installs the pack if needed; the Play tab shows progress.
+            if !root.selected: Button {
+                text: "Select";
+                enabled: Store.can-switch;
+                clicked => {
+                    Store.select-profile(root.index);
+                    Store.page = Page.play;
+                }
+            }
             Button {
                 icon: Icons.folder;
-                clicked => { Store.open-game-dir(); }
+                clicked => { Store.open-game-dir(root.index); }
             }
             Button {
                 text: "Edit";
                 icon: Icons.pencil;
                 enabled: Store.screen != Screen.running;
-                clicked => { Store.page = Page.edit; }
+                clicked => { Store.edit-installation(root.index); }
             }
         }
     }
@@ -165,17 +189,33 @@ component InstallationRow inherits Rectangle {
 export component InstallationsPage inherits Rectangle {
     background: Theme.content;
 
-    VerticalLayout {
-        padding: 32px;
-        spacing: 16px;
-        alignment: start;
-        Text {
-            text: "1 installation";
-            color: Theme.text;
-            font-size: 15px;
-            font-weight: 700;
+    ScrollView {
+        VerticalLayout {
+            padding: 32px;
+            spacing: 16px;
+            alignment: start;
+            HorizontalLayout {
+                Text {
+                    text: Store.profiles.length == 1 ? "1 installation" : Store.profiles.length + " installations";
+                    // Takes the slack so the button keeps its natural width.
+                    horizontal-stretch: 1;
+                    color: Theme.text;
+                    font-size: 15px;
+                    font-weight: 700;
+                    vertical-alignment: center;
+                }
+                Button {
+                    text: "New installation";
+                    icon: Icons.plus;
+                    enabled: Store.can-switch;
+                    clicked => { Store.new-installation(); }
+                }
+            }
+            for profile[i] in Store.profiles: InstallationRow {
+                profile: profile;
+                index: i;
+            }
         }
-        InstallationRow { }
     }
 }
 
@@ -225,22 +265,36 @@ component ReadOnlyBox inherits Rectangle {
     }
 }
 
-// Edits a copy of the profile; nothing is stored until Save.
+// Edits `Store.draft`, or creates a new installation when
+// `Store.editing` is -1. Nothing is stored until Save.
 export component EditPage inherits Rectangle {
     background: Theme.content;
+
+    property <bool> creating: Store.editing < 0;
+    // The pack is picked only when creating.
+    property <int> pack-choice: Store.draft.pack;
+    property <PackInfo> pack: Store.packs[root.pack-choice];
+    // Deleting the selected installation mid-install or mid-game would
+    // pull it out from under that work.
+    property <bool> can-delete: !root.creating && Store.profiles.length > 1
+        && (Store.editing != Store.selected || Store.can-switch);
 
     property <bool> width-ok: width-field.text == "" || width-field.text.to-float() >= 1;
     property <bool> height-ok: height-field.text == "" || height-field.text.to-float() >= 1;
     property <bool> resolution-ok: root.width-ok && root.height-ok
         && (width-field.text == "") == (height-field.text == "");
-    property <bool> can-save: name-field.text != "" && root.resolution-ok;
-    property <int> ram: Store.profile.ram-gb;
+    // A new installation without a name is named after its pack.
+    property <bool> can-save: (name-field.text != "" || root.creating) && root.resolution-ok;
+    property <int> ram: Store.draft.ram-gb;
+    // Only the selected installation is installed; its folder can't move mid-install.
+    property <bool> dir-locked: Store.screen == Screen.installing && Store.editing == Store.selected;
     // Column width for the two-column rows (page padding and gap removed).
     property <length> half: (root.width - 64px - 24px) / 2;
 
     function save() {
-        Store.save-profile({
-            name: name-field.text,
+        let profile = {
+            name: name-field.text == "" ? root.pack.name : name-field.text,
+            pack: root.pack-choice,
             ram-gb: root.ram,
             width: width-field.text == "" ? 0 : width-field.text.to-float(),
             height: height-field.text == "" ? 0 : height-field.text.to-float(),
@@ -248,8 +302,15 @@ export component EditPage inherits Rectangle {
             jvm-args: jvm-field.text,
             java-path: java-field.text,
             game-dir: dir-field.text,
-        });
-        Store.page = Page.installations;
+        };
+        if root.creating {
+            Store.create-profile(profile);
+            // The Play tab shows the download.
+            Store.page = Page.play;
+        } else {
+            Store.save-profile(Store.editing, profile);
+            Store.page = Page.installations;
+        }
     }
 
     VerticalLayout {
@@ -269,7 +330,7 @@ export component EditPage inherits Rectangle {
                         clicked => { Store.page = Page.installations; }
                     }
                     Text {
-                        text: "Edit installation";
+                        text: root.creating ? "New installation" : "Edit installation";
                         color: Theme.text;
                         font-size: 20px;
                         font-weight: 700;
@@ -282,9 +343,9 @@ export component EditPage inherits Rectangle {
                         width: root.half;
                         caption: "NAME";
                         name-field := TextField {
-                            text: Store.profile.name;
-                            placeholder: "EkipaCraft";
-                            invalid: self.text == "";
+                            text: Store.draft.name;
+                            placeholder: root.pack.name;
+                            invalid: self.text == "" && !root.creating;
                         }
                     }
                     Field {
@@ -296,7 +357,7 @@ export component EditPage inherits Rectangle {
                             width-field := TextField {
                                 width: 88px;
                                 horizontal-stretch: 0;
-                                text: Store.profile.width > 0 ? Store.profile.width : "";
+                                text: Store.draft.width > 0 ? Store.draft.width : "";
                                 placeholder: "Auto";
                                 input-type: InputType.number;
                                 invalid: !root.width-ok;
@@ -310,7 +371,7 @@ export component EditPage inherits Rectangle {
                             height-field := TextField {
                                 width: 88px;
                                 horizontal-stretch: 0;
-                                text: Store.profile.height > 0 ? Store.profile.height : "";
+                                text: Store.draft.height > 0 ? Store.draft.height : "";
                                 placeholder: "Auto";
                                 input-type: InputType.number;
                                 invalid: !root.height-ok;
@@ -318,7 +379,7 @@ export component EditPage inherits Rectangle {
                             Rectangle { width: 8px; }
                             fullscreen := CheckBox {
                                 text: "Fullscreen";
-                                checked: Store.profile.fullscreen;
+                                checked: Store.draft.fullscreen;
                             }
                         }
                         Hint {
@@ -331,12 +392,22 @@ export component EditPage inherits Rectangle {
                 Columns {
                     Field {
                         width: root.half;
-                        caption: "VERSION";
-                        ReadOnlyBox {
-                            text: Store.pack-label + "  ·  Minecraft " + Store.minecraft;
+                        caption: root.creating ? "MODPACK" : "VERSION";
+                        if root.creating: VerticalLayout {
+                            spacing: 8px;
+                            for pack[i] in Store.packs: Choice {
+                                title: pack.label;
+                                detail: "Minecraft " + pack.minecraft + "  ·  NeoForge " + pack.neoforge;
+                                selected: i == root.pack-choice;
+                                clicked => { root.pack-choice = i; }
+                            }
+                        }
+                        if !root.creating: ReadOnlyBox {
+                            text: root.pack.label + "  ·  Minecraft " + root.pack.minecraft;
                         }
                         Hint {
-                            text: "Version pinned by the server admin · NeoForge " + Store.neoforge;
+                            text: root.creating ? "Downloads when you create the installation."
+                                : "Version pinned by the server admin · NeoForge " + root.pack.neoforge;
                         }
                     }
                     Field {
@@ -345,19 +416,20 @@ export component EditPage inherits Rectangle {
                         HorizontalLayout {
                             spacing: 8px;
                             dir-field := TextField {
-                                text: Store.profile.game-dir;
-                                placeholder: Store.default-game-dir;
+                                text: Store.draft.game-dir;
+                                placeholder: root.pack.game-dir;
                                 // Moving it reinstalls the pack; not mid-install.
-                                read-only: Store.screen == Screen.installing;
+                                read-only: root.dir-locked;
                             }
                             Button {
                                 text: "Open";
                                 icon: Icons.folder;
-                                clicked => { Store.open-game-dir(); }
+                                enabled: !root.creating;
+                                clicked => { Store.open-game-dir(Store.editing); }
                             }
                         }
                         Hint {
-                            text: Store.screen == Screen.installing ? "Can be changed once the install finishes."
+                            text: root.dir-locked ? "Can be changed once the install finishes."
                                 : "Empty means default. A new folder gets a fresh pack.";
                         }
                     }
@@ -419,7 +491,7 @@ export component EditPage inherits Rectangle {
                         width: root.half;
                         caption: "JAVA EXECUTABLE";
                         java-field := TextField {
-                            text: Store.profile.java-path;
+                            text: Store.draft.java-path;
                             placeholder: "Bundled Java runtime (recommended)";
                         }
                         Hint {
@@ -431,7 +503,7 @@ export component EditPage inherits Rectangle {
                 Field {
                     caption: "JVM ARGUMENTS";
                     jvm-field := TextField {
-                        text: Store.profile.jvm-args;
+                        text: Store.draft.jvm-args;
                         placeholder: "-XX:+UseG1GC -XX:MaxGCPauseMillis=50";
                     }
                 }
@@ -453,13 +525,23 @@ export component EditPage inherits Rectangle {
                 padding-top: 16px;
                 padding-bottom: 16px;
                 spacing: 10px;
-                alignment: end;
+                if !root.creating: Button {
+                    text: "Delete";
+                    icon: Icons.trash;
+                    enabled: root.can-delete;
+                    clicked => {
+                        Store.delete-profile(Store.editing);
+                        Store.page = Page.installations;
+                    }
+                }
+                // Pushes Cancel and Save to the right.
+                Rectangle { horizontal-stretch: 1; }
                 Button {
                     text: "Cancel";
                     clicked => { Store.page = Page.installations; }
                 }
                 Button {
-                    text: "Save";
+                    text: root.creating ? "Create" : "Save";
                     primary: true;
                     enabled: root.can-save;
                     clicked => { root.save(); }
@@ -573,7 +655,7 @@ export component SettingsPage inherits Rectangle {
                 }
                 InfoRow {
                     label: "Modpack";
-                    value: Store.pack-label;
+                    value: Store.pack.label;
                 }
                 HorizontalLayout {
                     spacing: 16px;
@@ -586,7 +668,7 @@ export component SettingsPage inherits Rectangle {
                         text: "Open";
                         width: 120px;
                         icon: Icons.folder;
-                        clicked => { Store.open-game-dir(); }
+                        clicked => { Store.open-game-dir(Store.selected); }
                     }
                 }
             }

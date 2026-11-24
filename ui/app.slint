@@ -2,12 +2,12 @@
 // sidebar on the left, page header with tabs, page body, bottom Play bar.
 
 import { Theme } from "theme.slint";
-import { Store, Screen, Page, Profile, LauncherOptions } from "store.slint";
+import { Store, Screen, Page, PackInfo, Profile, LauncherOptions } from "store.slint";
 import { Sidebar, PageHeader, BottomBar } from "chrome.slint";
 import { PlayPage, InstallationsPage, EditPage, SettingsPage } from "pages.slint";
 import { NickDialog, ErrorDialog } from "dialogs.slint";
 
-export { Store, Screen, Page, Profile, LauncherOptions }
+export { Store, Screen, Page, PackInfo, Profile, LauncherOptions }
 
 export component AppWindow inherits Window {
     title: Store.launcher-name;
@@ -23,7 +23,7 @@ export component AppWindow inherits Window {
         Sidebar { }
         VerticalLayout {
             PageHeader {
-                title: Store.page == Page.settings ? "LAUNCHER SETTINGS" : Store.pack-subtitle.to-uppercase();
+                title: Store.page == Page.settings ? "LAUNCHER SETTINGS" : Store.pack.name.to-uppercase();
                 tabs: Store.page != Page.settings;
                 note: "Changes are saved automatically";
             }
