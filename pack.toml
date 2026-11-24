@@ -3,16 +3,37 @@
 # Name of the data directory (~/.local/share/<id> on Linux, %APPDATA%\<id> on Windows).
 id = "ekipamc"
 name = "EkipaMC"
-subtitle = "All the Mods 11"
 
+# Modpacks players can install. The first one is the default: it is
+# installed on first start. The others can be picked when creating a new
+# installation.
+#
+# Each pack:
+#   id         stable name, also its game folder (instances/<id>); never rename it
+#   minecraft  Minecraft version
+#   neoforge   must match the NeoForge version the modpack was made for
+#              (see "neoforge-..." in the CurseForge manifest.json of the release)
+#   [packs.modpack]  the hosted zip with mods/, config/, ... at its root.
+#              Leave it out to launch plain NeoForge.
+
+[[packs]]
+id = "atm10"
+name = "All the Mods 10"
+minecraft = "1.21.1"
+neoforge = "21.1.266"
+
+[packs.modpack]
+version = "8.6"
+url = "https://github.com/PawWin/ekipamc/releases/download/pack-8.6/atm10-8.6.zip"
+sha256 = "21ad7ea04af3cf35d27925f2cbb3b515822151bbb33564abc3614e72d0db07bb"
+
+[[packs]]
+id = "atm11"
+name = "All the Mods 11"
 minecraft = "26.1.2"
-# Must match the NeoForge version the modpack was made for
-# (see "neoforge-..." in the CurseForge manifest.json of the ATM11 release).
 neoforge = "26.1.2.126"
 
-# The hosted modpack zip. Leave this section out to launch plain NeoForge.
-# The zip holds the instance folders at its root: mods/, config/, kubegroovy/, ...
-[modpack]
+[packs.modpack]
 version = "0.15.0-beta"
 url = "https://github.com/PawWin/ekipamc/releases/download/pack-atm11-0.15.0-beta/atm11-0.15.0-beta.zip"
 sha256 = "044705e708ca69a2c3cefd80d34fd3d9df7de709ca5bcce132cb279a24dc32af"

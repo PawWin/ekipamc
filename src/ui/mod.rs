@@ -5,11 +5,11 @@ mod avatar;
 use crate::game::launch;
 use crate::install::{self, Progress};
 use crate::net::Net;
-use crate::pack::PACK;
+use crate::pack::{CONFIG, Pack};
 use crate::paths::Paths;
 use crate::settings::{self, Resolution, Settings};
 use anyhow::Result;
-use slint::{CloseRequestResponse, ComponentHandle};
+use slint::{CloseRequestResponse, ComponentHandle, ModelRc, VecModel};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -20,7 +20,6 @@ slint::include_modules!();
 struct Launcher {
     runtime: tokio::runtime::Handle,
     net: Net,
-    /// Data directory layout with the default game directory; see `game_paths`.
     paths: Paths,
     /// Source of truth for what is on disk; the UI shows a copy.
     settings: Arc<Mutex<Settings>>,
@@ -28,9 +27,9 @@ struct Launcher {
 }
 
 pub fn run() -> Result<()> {
-    let pack = &*PACK;
-    let paths = Paths::new(&pack.id)?;
-    let mut saved = Settings::load(&paths.settings());
+    let config = &*CONFIG;
+    let paths = Paths::new(&config.id)?;
+    let mut saved = Settings::load(&paths.settings(), config);
     if !settings::is_valid_nick(&saved.nick) {
         saved.nick.clear();
     }
@@ -38,15 +37,14 @@ pub fn run() -> Result<()> {
 
     let app = AppWindow::new()?;
     let store = app.global::<Store>();
-    store.set_launcher_name(pack.name.as_str().into());
-    store.set_pack_subtitle(pack.subtitle.as_str().into());
-    if let Some(modpack) = &pack.modpack {
-        store.set_pack_version(modpack.version.as_str().into());
-    }
-    store.set_minecraft(pack.minecraft.as_str().into());
-    store.set_neoforge(pack.neoforge.as_str().into());
+    store.set_launcher_name(config.name.as_str().into());
     store.set_launcher_version(env!("CARGO_PKG_VERSION").into());
-    store.set_default_game_dir(short_path(&paths.instance()).into());
+    let packs: Vec<PackInfo> = config
+        .packs
+        .iter()
+        .map(|pack| pack_info(pack, &paths))
+        .collect();
+    store.set_packs(ModelRc::new(VecModel::from(packs)));
     store.set_min_ram_gb(settings::MIN_RAM_GB as i32);
     store.set_max_ram_gb(settings::MAX_RAM_GB as i32);
     show_settings(&app, &saved, &paths);
@@ -68,7 +66,19 @@ pub fn run() -> Result<()> {
     });
     store.on_save_profile({
         let launcher = launcher.clone();
-        move |profile| launcher.save_profile(profile.into())
+        move |index, profile| launcher.save_profile(index as usize, profile.into())
+    });
+    store.on_create_profile({
+        let launcher = launcher.clone();
+        move |profile| launcher.create_profile(profile.into())
+    });
+    store.on_delete_profile({
+        let launcher = launcher.clone();
+        move |index| launcher.delete_profile(index as usize)
+    });
+    store.on_select_profile({
+        let launcher = launcher.clone();
+        move |index| launcher.select_profile(index as usize)
     });
     store.on_save_options({
         let launcher = launcher.clone();
@@ -84,10 +94,13 @@ pub fn run() -> Result<()> {
     });
     store.on_open_game_dir({
         let launcher = launcher.clone();
-        move || {
-            let dir = launcher.game_paths().instance();
-            std::fs::create_dir_all(&dir).ok();
-            open_path(&dir)
+        move |index| {
+            let settings = launcher.settings.lock().unwrap();
+            if let Some(profile) = settings.profiles.get(index as usize) {
+                let dir = launcher.paths.game_dir(profile);
+                std::fs::create_dir_all(&dir).ok();
+                open_path(&dir)
+            }
         }
     });
     store.on_open_logs_dir({
@@ -116,12 +129,15 @@ impl Launcher {
         self.window.upgrade_in_event_loop(f).ok();
     }
 
+    /// Installs the selected installation's pack. Callers make sure no
+    /// install or game is running; the UI only allows switching when idle.
     fn start_install(&self) {
+        let (pack, game_dir) = self.selected();
         self.update("Starting", "", None);
         self.ui(|app| app.global::<Store>().set_screen(Screen::Installing));
         let this = self.clone();
         self.runtime.spawn(async move {
-            let result = install::install(&this.net, &this.game_paths(), &PACK, &this).await;
+            let result = install::install(&this.net, &this.paths, pack, &game_dir, &this).await;
             this.ui(move |app| match result {
                 Ok(()) => app.global::<Store>().set_screen(Screen::Ready),
                 Err(error) => show_error(&app, format!("{error:#}")),
@@ -142,31 +158,82 @@ impl Launcher {
         }
     }
 
-    /// Saves the installation; a new game directory gets the modpack
-    /// installed into it right away.
-    fn save_profile(&self, profile: settings::Profile) {
-        let moved = self.settings.lock().unwrap().profile.game_dir != profile.game_dir;
-        self.update_settings(|settings| settings.profile = profile);
-        if moved {
+    /// Saves the installation at `index`. When it is the selected one, a
+    /// new game directory gets the modpack installed into it right away.
+    fn save_profile(&self, index: usize, profile: settings::Profile) {
+        let reinstall = {
+            let settings = self.settings.lock().unwrap();
+            let Some(old) = settings.profiles.get(index) else {
+                return;
+            };
+            index == settings.selected && old.game_dir != profile.game_dir
+        };
+        self.update_settings(|settings| settings.profiles[index] = profile);
+        if reinstall {
             self.start_install();
         }
     }
 
-    /// Paths with the player's game directory applied.
-    fn game_paths(&self) -> Paths {
+    /// Adds an installation and selects it, which downloads its pack.
+    fn create_profile(&self, profile: settings::Profile) {
+        self.update_settings(|settings| {
+            settings.profiles.push(profile);
+            settings.selected = settings.profiles.len() - 1;
+        });
+        self.start_install();
+    }
+
+    /// Removes the installation's entry; its files stay on disk.
+    fn delete_profile(&self, index: usize) {
+        let was_selected = {
+            let settings = self.settings.lock().unwrap();
+            if settings.profiles.len() < 2 || index >= settings.profiles.len() {
+                return;
+            }
+            index == settings.selected
+        };
+        self.update_settings(|settings| {
+            settings.profiles.remove(index);
+            if was_selected {
+                settings.selected = 0;
+            } else if index < settings.selected {
+                settings.selected -= 1;
+            }
+        });
+        if was_selected {
+            self.start_install();
+        }
+    }
+
+    /// Makes Play start the installation at `index`, installing its pack
+    /// first if needed (a no-op check when it is already there).
+    fn select_profile(&self, index: usize) {
+        if index >= self.settings.lock().unwrap().profiles.len() {
+            return;
+        }
+        self.update_settings(|settings| settings.selected = index);
+        self.start_install();
+    }
+
+    /// The selected installation's pack and game directory.
+    fn selected(&self) -> (&'static Pack, PathBuf) {
         let settings = self.settings.lock().unwrap();
-        self.paths
-            .with_instance(settings.profile.game_dir.as_deref())
+        let profile = settings.profile();
+        let pack = CONFIG
+            .pack(&profile.pack)
+            .expect("Settings::load drops profiles of unknown packs");
+        (pack, self.paths.game_dir(profile))
     }
 
     fn play(&self) {
         let settings = self.settings.lock().unwrap().clone();
-        let paths = self.game_paths();
+        let (pack, _) = self.selected();
         self.ui(|app| app.global::<Store>().set_screen(Screen::Running));
 
         let this = self.clone();
         self.runtime.spawn(async move {
-            let result = match launch::start(&paths, &PACK, &settings) {
+            let result = match launch::start(&this.paths, pack, settings.profile(), &settings.nick)
+            {
                 Ok(mut child) => {
                     if settings.launcher.open_log {
                         open_path(&this.log_file());
@@ -223,13 +290,13 @@ impl Progress for Launcher {
 /// Copies saved settings into the window.
 fn show_settings(app: &AppWindow, settings: &Settings, paths: &Paths) {
     let store = app.global::<Store>();
-    let game_dir = paths
-        .with_instance(settings.profile.game_dir.as_deref())
-        .instance();
-    store.set_game_dir(short_path(&game_dir).into());
+    store.set_game_dir(short_path(&paths.game_dir(settings.profile())).into());
     store.set_nick(settings.nick.as_str().into());
     store.set_avatar(avatar::face(&settings.nick));
-    store.set_profile((&settings.profile).into());
+    let profiles: Vec<Profile> = settings.profiles.iter().map(Profile::from).collect();
+    store.set_profiles(ModelRc::new(VecModel::from(profiles)));
+    store.set_selected(settings.selected as i32);
+    store.set_profile(settings.profile().into());
     store.set_options(LauncherOptions {
         keep_open: settings.launcher.keep_open,
         open_log: settings.launcher.open_log,
@@ -255,6 +322,21 @@ fn short_path(path: &Path) -> String {
     }
 }
 
+fn pack_info(pack: &Pack, paths: &Paths) -> PackInfo {
+    PackInfo {
+        name: pack.name.as_str().into(),
+        label: pack.label().into(),
+        version: pack
+            .modpack
+            .as_ref()
+            .map_or("", |modpack| modpack.version.as_str())
+            .into(),
+        minecraft: pack.minecraft.as_str().into(),
+        neoforge: pack.neoforge.as_str().into(),
+        game_dir: short_path(&paths.default_game_dir(&pack.id)).into(),
+    }
+}
+
 /// Opens a folder or file with the system's default app.
 fn open_path(path: &Path) {
     let opener = if cfg!(windows) {
@@ -269,6 +351,12 @@ impl From<&settings::Profile> for Profile {
     fn from(profile: &settings::Profile) -> Self {
         Self {
             name: profile.name.as_str().into(),
+            // Settings::load keeps only profiles of known packs.
+            pack: CONFIG
+                .packs
+                .iter()
+                .position(|pack| pack.id == profile.pack)
+                .unwrap_or_default() as i32,
             ram_gb: profile.ram_gb as i32,
             width: profile.resolution.map_or(0, |r| r.width as i32),
             height: profile.resolution.map_or(0, |r| r.height as i32),
@@ -282,8 +370,13 @@ impl From<&settings::Profile> for Profile {
 
 impl From<Profile> for settings::Profile {
     fn from(profile: Profile) -> Self {
+        let pack = CONFIG
+            .packs
+            .get(profile.pack.max(0) as usize)
+            .unwrap_or_else(|| CONFIG.default_pack());
         Self {
             name: profile.name.trim().into(),
+            pack: pack.id.clone(),
             ram_gb: (profile.ram_gb.max(0) as u32)
                 .clamp(settings::MIN_RAM_GB, settings::MAX_RAM_GB),
             fullscreen: profile.fullscreen,

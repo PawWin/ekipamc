@@ -12,6 +12,7 @@ use crate::net::Net;
 use crate::pack::Pack;
 use crate::paths::Paths;
 use anyhow::{Context, Result};
+use std::path::Path;
 
 /// Receives install status for display. `fraction` is `None` when the step
 /// has no measurable progress.
@@ -19,13 +20,15 @@ pub trait Progress: Sync {
     fn update(&self, stage: &str, detail: &str, fraction: Option<f32>);
 }
 
+/// Installs `pack`, with its modpack unpacked into `game_dir`.
 pub async fn install(
     net: &Net,
     paths: &Paths,
     pack: &Pack,
+    game_dir: &Path,
     progress: &impl Progress,
 ) -> Result<()> {
-    std::fs::create_dir_all(paths.instance())?;
+    std::fs::create_dir_all(game_dir)?;
 
     progress.update("Preparing Minecraft", "", None);
     minecraft::ensure_version_file(net, paths, &pack.minecraft).await?;
@@ -67,9 +70,9 @@ pub async fn install(
     )
     .await?;
 
-    if let Some(pack) = &pack.modpack {
+    if let Some(modpack) = &pack.modpack {
         progress.update("Checking modpack", "", None);
-        modpack::ensure(net, paths, pack, progress).await?;
+        modpack::ensure(net, paths, modpack, game_dir, progress).await?;
     }
     std::fs::remove_dir_all(paths.tmp()).ok();
     Ok(())

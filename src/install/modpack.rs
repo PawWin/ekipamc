@@ -18,10 +18,10 @@ pub async fn ensure(
     net: &Net,
     paths: &Paths,
     modpack: &Modpack,
+    game_dir: &Path,
     progress: &impl Progress,
 ) -> Result<()> {
-    let instance = paths.instance();
-    let marker = instance.join(MARKER);
+    let marker = game_dir.join(MARKER);
     if std::fs::read_to_string(&marker).is_ok_and(|sha| sha.eq_ignore_ascii_case(&modpack.sha256)) {
         return Ok(());
     }
@@ -47,7 +47,7 @@ pub async fn ensure(
     .await?;
 
     progress.update("Unpacking modpack", "", None);
-    let target = instance.clone();
+    let target = game_dir.to_path_buf();
     let source = zip_path.clone();
     tokio::task::spawn_blocking(move || extract(&source, &target)).await??;
 

@@ -4,7 +4,7 @@ use super::version::VersionJson;
 use crate::install::java;
 use crate::pack::Pack;
 use crate::paths::Paths;
-use crate::settings::{Profile, Settings};
+use crate::settings::Profile;
 use anyhow::{Context, Result};
 use md5::{Digest, Md5};
 use std::collections::HashMap;
@@ -13,26 +13,27 @@ use std::process::Stdio;
 use tokio::process::Child;
 use uuid::Uuid;
 
-/// Starts the game; the caller waits on the returned process. Game output
-/// goes to `logs/game-output.log` next to the launcher data.
-pub fn start(paths: &Paths, pack: &Pack, settings: &Settings) -> Result<Child> {
+/// Starts `profile` (an installation of `pack`) as `nick`; the caller waits
+/// on the returned process. Game output goes to `logs/game-output.log` next
+/// to the launcher data.
+pub fn start(paths: &Paths, pack: &Pack, profile: &Profile, nick: &str) -> Result<Child> {
     let version = VersionJson::resolve(&paths.versions(), &pack.version_id())?;
     let component = &version
         .java_version
         .as_ref()
         .context("no Java version in version file")?
         .component;
-    let args = command_line(paths, &version, settings)?;
+    let args = command_line(paths, &version, profile, nick)?;
 
     std::fs::create_dir_all(paths.logs())?;
     let log = std::fs::File::create(paths.logs().join("game-output.log"))?;
-    let java = match &settings.profile.java_path {
+    let java = match &profile.java_path {
         Some(custom) => custom.clone(),
         None => java::executable(paths, component),
     };
     java::command(&java)
         .args(&args)
-        .current_dir(paths.instance())
+        .current_dir(paths.game_dir(profile))
         .stdin(Stdio::null())
         .stdout(log.try_clone()?)
         .stderr(log)
@@ -42,7 +43,12 @@ pub fn start(paths: &Paths, pack: &Pack, settings: &Settings) -> Result<Child> {
 
 /// JVM options, main class and game arguments, with every `${...}`
 /// placeholder filled in.
-fn command_line(paths: &Paths, version: &VersionJson, settings: &Settings) -> Result<Vec<String>> {
+fn command_line(
+    paths: &Paths,
+    version: &VersionJson,
+    profile: &Profile,
+    nick: &str,
+) -> Result<Vec<String>> {
     let libraries = paths.libraries();
     let mut classpath: Vec<PathBuf> = version
         .artifacts()
@@ -58,10 +64,10 @@ fn command_line(paths: &Paths, version: &VersionJson, settings: &Settings) -> Re
         .asset_index
         .as_ref()
         .context("no asset index in version file")?;
-    let uuid = offline_uuid(&settings.nick).simple().to_string();
+    let uuid = offline_uuid(nick).simple().to_string();
     let path_string = |path: PathBuf| path.to_string_lossy().into_owned();
     let vars: HashMap<&str, String> = HashMap::from([
-        ("auth_player_name", settings.nick.clone()),
+        ("auth_player_name", nick.to_owned()),
         ("auth_uuid", uuid),
         ("auth_access_token", "0".into()),
         ("auth_xuid", "0".into()),
@@ -69,10 +75,10 @@ fn command_line(paths: &Paths, version: &VersionJson, settings: &Settings) -> Re
         ("user_type", "legacy".into()),
         ("version_name", version.id.clone()),
         ("version_type", "release".into()),
-        ("game_directory", path_string(paths.instance())),
+        ("game_directory", path_string(paths.game_dir(profile))),
         ("assets_root", path_string(paths.assets())),
         ("assets_index_name", asset_index.id.clone()),
-        ("natives_directory", path_string(paths.natives())),
+        ("natives_directory", path_string(paths.natives(&version.id))),
         ("library_directory", path_string(libraries)),
         ("classpath", classpath),
         ("classpath_separator", separator.into()),
@@ -80,7 +86,7 @@ fn command_line(paths: &Paths, version: &VersionJson, settings: &Settings) -> Re
         ("launcher_version", env!("CARGO_PKG_VERSION").into()),
     ]);
 
-    let mut args = vec![format!("-Xmx{}G", settings.profile.ram_gb)];
+    let mut args = vec![format!("-Xmx{}G", profile.ram_gb)];
     if let Some(logging) = version
         .logging
         .as_ref()
@@ -98,13 +104,7 @@ fn command_line(paths: &Paths, version: &VersionJson, settings: &Settings) -> Re
             .map(|arg| substitute(arg, &vars)),
     );
     // After the version's own options so the player's can override them.
-    args.extend(
-        settings
-            .profile
-            .jvm_args
-            .split_whitespace()
-            .map(String::from),
-    );
+    args.extend(profile.jvm_args.split_whitespace().map(String::from));
     args.push(version.main_class.clone());
     args.extend(
         version
@@ -114,7 +114,7 @@ fn command_line(paths: &Paths, version: &VersionJson, settings: &Settings) -> Re
             .flat_map(|arg| arg.values())
             .map(|arg| substitute(arg, &vars)),
     );
-    args.extend(window_args(&settings.profile));
+    args.extend(window_args(profile));
     Ok(args)
 }
 

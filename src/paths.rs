@@ -1,14 +1,15 @@
 //! On-disk layout. The root mirrors a `.minecraft` folder so the NeoForge
-//! installer can target it directly; the game itself runs in `instance/`
-//! unless the player picks another game directory.
+//! installer can target it directly and every pack shares Java, libraries
+//! and assets. Each pack's game runs in `instances/<pack id>/` unless the
+//! player picks another game directory.
 
+use crate::settings::Profile;
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
 pub struct Paths {
     pub root: PathBuf,
-    instance: PathBuf,
 }
 
 impl Paths {
@@ -19,18 +20,20 @@ impl Paths {
             .join(id);
         std::fs::create_dir_all(&root)
             .with_context(|| format!("cannot create {}", root.display()))?;
-        Ok(Self {
-            instance: root.join("instance"),
-            root,
-        })
+        Ok(Self { root })
     }
 
-    /// The same layout with `dir` as the game directory, if given.
-    pub fn with_instance(&self, dir: Option<&Path>) -> Self {
-        Self {
-            root: self.root.clone(),
-            instance: dir.map_or_else(|| self.root.join("instance"), Path::to_path_buf),
-        }
+    /// Where a pack's game runs unless the profile picks another directory.
+    pub fn default_game_dir(&self, pack_id: &str) -> PathBuf {
+        self.root.join("instances").join(pack_id)
+    }
+
+    /// The profile's game directory: mods, config, saves, options.txt.
+    pub fn game_dir(&self, profile: &Profile) -> PathBuf {
+        profile
+            .game_dir
+            .clone()
+            .unwrap_or_else(|| self.default_game_dir(&profile.pack))
     }
 
     pub fn libraries(&self) -> PathBuf {
@@ -53,13 +56,10 @@ impl Paths {
         self.root.join("java").join(component)
     }
 
-    /// The game directory: mods, config, saves, options.txt.
-    pub fn instance(&self) -> PathBuf {
-        self.instance.clone()
-    }
-
-    pub fn natives(&self) -> PathBuf {
-        self.root.join("natives")
+    /// Native libraries LWJGL and Netty extract, per version so packs on
+    /// different LWJGL releases don't overwrite each other's.
+    pub fn natives(&self, version_id: &str) -> PathBuf {
+        self.root.join("natives").join(version_id)
     }
 
     pub fn logs(&self) -> PathBuf {

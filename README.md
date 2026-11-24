@@ -4,22 +4,26 @@
 
 A one-button Minecraft launcher for our yearly server, written in Rust with a Slint UI. It runs on Linux and Windows.
 
-The pack is baked in. A player opens the launcher, waits for the first download, types a nick and hits Play. They never see a mod folder, a Java installer or a Microsoft login.
+The modpacks are baked in. A player opens the launcher, waits for the first download, types a nick and hits Play. They never see a mod folder, a Java installer or a Microsoft login.
 
 ## What happens on start
 
+The launcher installs the selected installation's pack. On the very first start that is the default pack, the first one in `pack.toml` (All the Mods 10).
+
 1. Download the Minecraft version file from Mojang.
-2. Install the Java runtime Mojang ships for that version (Java 25 for 26.1.2).
+2. Install the Java runtime Mojang ships for that version (Java 21 for 1.21.1, Java 25 for 26.1.2).
 3. Run the official NeoForge installer headlessly.
 4. Download libraries, the client jar and assets (about 3900 small files).
-5. Download the modpack zip, check its sha256 and unpack it into `instance/`.
+5. Download the modpack zip, check its sha256 and unpack it into `instances/<pack id>/`.
 6. Show the Play button. On the very first start, the nick dialog opens right away, while the download runs.
 
 Each step skips work that's already done. After the first run, start-up takes milliseconds and works offline.
 
-The window follows the layout of the official Minecraft launcher: account and game in the sidebar, Play and Installations tabs, and the Play button in the bottom bar. The pack shows up as one installation, **EkipaCraft**, which players can edit like a vanilla launcher profile: name, memory, window size, fullscreen, Java executable and extra JVM arguments. The pack version is baked in and shown read-only. Launcher settings cover keeping the launcher open while the game runs and opening the output log on start.
+The window follows the layout of the official Minecraft launcher: account and game in the sidebar, Play and Installations tabs, and the Play button in the bottom bar. The default pack shows up as the installation **EkipaCraft**. Players can add more with **New installation**, which offers every pack in `pack.toml` (that's how they get All the Mods 11). Creating one selects it and downloads its pack. Each installation can be edited like a vanilla launcher profile: name, memory, window size, fullscreen, game directory, Java executable and extra JVM arguments. Its pack is picked when it's created and shown read-only after that. Launcher settings cover keeping the launcher open while the game runs and opening the output log on start.
 
-The nick, the installation and the launcher settings are saved to `settings.toml` in the data directory, so players type their nick once.
+Switching installations is blocked while a pack installs or the game runs. Deleting an installation only removes it from the list; its files stay on disk.
+
+The nick, the installations and the launcher settings are saved to `settings.toml` in the data directory, so players type their nick once.
 
 Accounts are offline-mode. The nick becomes the player name, and the UUID is the same one an offline server computes (`OfflinePlayer:<nick>`), so inventories stay tied to the nick.
 
@@ -30,11 +34,11 @@ Accounts are offline-mode. The nick becomes the player name, and the UUID is the
 | Linux   | `~/.local/share/ekipamc`           |
 | Windows | `%APPDATA%\ekipamc`                |
 
-The game directory (saves, options, screenshots) is `instance/` inside it. If the game crashes, the launcher tells the player to send `logs/game-output.log`.
+Java, libraries and assets are shared by every pack. Each pack's game directory (mods, saves, options, screenshots) is `instances/<pack id>/` inside it, so packs never mix mods. Installations of the same pack share that folder unless one is given its own. If the game crashes, the launcher tells the player to send `logs/game-output.log`.
 
 ## Setting up a season
 
-Everything a season needs lives in [`pack.toml`](pack.toml). It's compiled into the binary, so rebuild after editing it.
+Everything a season needs lives in [`pack.toml`](pack.toml): a list of `[[packs]]`, the first being the default. It's compiled into the binary, so rebuild after editing it. To add a pack, follow the steps below and append a new `[[packs]]` entry. To change the default, move its entry to the top.
 
 ### 1. Build the modpack zip
 
@@ -63,15 +67,19 @@ gh release create pack-atm11-0.15.0-beta ~/atm11-0.15.0-beta.zip --title "Modpac
 ### 3. Fill in `pack.toml`
 
 ```toml
+[[packs]]
+id = "atm11"              # stable: names the game folder, saved in players' settings
+name = "All the Mods 11"
+minecraft = "26.1.2"
 neoforge = "26.1.2.126"   # the version in the pack's manifest.json
 
-[modpack]
+[packs.modpack]
 version = "0.15.0-beta"
 url = "https://github.com/PawWin/ekipamc/releases/download/pack-atm11-0.15.0-beta/atm11-0.15.0-beta.zip"
 sha256 = "<from sha256sum>"
 ```
 
-`cargo test` checks that the file parses and the hash looks like a sha256.
+`cargo test` checks that the file parses, pack ids are unique and each hash looks like a sha256. Don't rename or remove a pack id players already use: installations of an unknown pack are dropped from their list.
 
 ### 4. Release the launcher
 
@@ -108,10 +116,10 @@ Linux builds need the fontconfig headers (`libfontconfig1-dev` on Debian/Ubuntu)
 
 | Path                   | Purpose                                                     |
 | ---------------------- | ----------------------------------------------------------- |
-| `pack.toml`            | Baked season config                                         |
+| `pack.toml`            | Baked packs; the first is the default                       |
 | `ui/app.slint`         | The window; `ui/` also holds the pages, dialogs and widgets |
 | `src/ui/`              | Connects UI callbacks to install/launch tasks               |
-| `src/settings.rs`      | Nick, EkipaCraft installation and launcher options on disk  |
+| `src/settings.rs`      | Nick, installations and launcher options on disk            |
 | `assets/`              | Icon, hero art, bundled fonts (OFL, licenses next to them)  |
 | `src/install/`         | Java, Minecraft files, NeoForge installer, modpack          |
 | `src/game/version.rs`  | Version JSON parsing, inheritance and OS rules              |
