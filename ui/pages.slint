@@ -257,7 +257,7 @@ export component EditPage inherits Rectangle {
             VerticalLayout {
                 padding: 32px;
                 padding-top: 20px;
-                padding-bottom: 20px;
+                padding-bottom: 24px;
                 spacing: 16px;
                 alignment: start;
 
@@ -278,25 +278,13 @@ export component EditPage inherits Rectangle {
                 }
 
                 Columns {
-                    HorizontalLayout {
+                    Field {
                         width: root.half;
-                        spacing: 16px;
-                        VerticalLayout {
-                            alignment: start;
-                            padding-top: 4px;
-                            Image {
-                                source: @image-url("../assets/icon.png");
-                                width: 56px;
-                                height: 56px;
-                            }
-                        }
-                        Field {
-                            caption: "NAME";
-                            name-field := TextField {
-                                text: Store.profile.name;
-                                placeholder: "EkipaCraft";
-                                invalid: self.text == "";
-                            }
+                        caption: "NAME";
+                        name-field := TextField {
+                            text: Store.profile.name;
+                            placeholder: "EkipaCraft";
+                            invalid: self.text == "";
                         }
                     }
                     Field {

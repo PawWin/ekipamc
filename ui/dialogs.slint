@@ -80,7 +80,10 @@ export component NickDialog inherits Modal {
         }
     }
 
-    init => { field.focus(); }
+    init => {
+        field.focus();
+        field.select-all();
+    }
 
     Hint {
         text: Store.nick == ""

@@ -31,8 +31,9 @@ export component Hint inherits Text {
     wrap: word-wrap;
 }
 
-// Raised button with a darker bottom edge. `primary` makes it green,
-// `flat` drops the fill until hovered (for icon buttons in dialogs).
+// Launcher button. `primary` makes it green with the raised bottom edge of
+// the Play button; secondary buttons are flat. `flat` drops the fill until
+// hovered.
 export component Button inherits Rectangle {
     in property <string> text;
     in property <string> icon;
@@ -56,7 +57,7 @@ export component Button inherits Rectangle {
     // Bottom edge, flattened while pressed.
     Rectangle {
         y: parent.height - self.height;
-        height: touch.pressed || !root.enabled || root.flat ? 0px : 3px;
+        height: touch.pressed || !root.enabled || !root.primary ? 0px : 3px;
         background: root.primary ? Theme.green-edge : Theme.button-edge;
         border-bottom-left-radius: 3px;
         border-bottom-right-radius: 3px;
@@ -66,7 +67,7 @@ export component Button inherits Rectangle {
         padding-left: root.text == "" ? 9px : 16px;
         padding-right: root.text == "" ? 9px : 16px;
         // Room for the bottom edge only while it is drawn.
-        padding-bottom: touch.pressed || !root.enabled || root.flat ? 0px : 3px;
+        padding-bottom: touch.pressed || !root.enabled || !root.primary ? 0px : 3px;
         spacing: 8px;
         alignment: center;
         if root.icon != "": Icon {
@@ -101,6 +102,10 @@ export component TextField inherits Rectangle {
     callback accepted(string);
     callback edited(string);
     forward-focus: input;
+
+    public function select-all() {
+        input.select-all();
+    }
 
     min-height: 40px;
     min-width: 64px;
@@ -160,7 +165,8 @@ export component CheckBox inherits Rectangle {
     in property <bool> enabled: true;
     callback toggled(bool);
 
-    min-height: 28px;
+    // Same height as fields and buttons so rows keep one rhythm.
+    min-height: 40px;
 
     HorizontalLayout {
         spacing: 12px;
