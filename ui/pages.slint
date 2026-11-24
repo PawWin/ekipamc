@@ -336,7 +336,7 @@ export component EditPage inherits Rectangle {
                             text: Store.pack-label + "  ·  Minecraft " + Store.minecraft;
                         }
                         Hint {
-                            text: "NeoForge " + Store.neoforge + ", set by the server admin.";
+                            text: "Version pinned by the server admin · NeoForge " + Store.neoforge;
                         }
                     }
                     Field {
@@ -498,7 +498,7 @@ component InfoRow inherits HorizontalLayout {
     // Fixed width so a row's button sits next to its value, at the same x
     // in every row, while dividers still run the full page width.
     Text {
-        width: 360px;
+        width: 240px;
         text: root.value;
         color: Theme.text;
         font-size: 14px;

@@ -312,7 +312,7 @@ export component PlayButton inherits Rectangle {
     Text {
         y: (parent.height - self.height) / 2 - (root.raised ? 2px : 0px);
         text: root.text;
-        color: root.busy ? #ffffff8c : root.enabled ? white : #a5b3a0;
+        color: root.busy ? #ffffffc0 : root.enabled ? white : #a5b3a0;
         font-family: Theme.display-font;
         font-size: 24px;
         letter-spacing: 1px;
@@ -464,8 +464,8 @@ export component BottomBar inherits Rectangle {
                             alignment: center;
                             spacing: 1px;
                             Text {
-                                text: Store.nick == "" ? "Set a nickname" : Store.nick;
-                                color: Store.nick == "" ? Theme.green-text : Theme.text;
+                                text: Store.nick == "" ? "Set nickname" : Store.nick;
+                                color: Theme.text;
                                 font-size: 15px;
                                 font-weight: 700;
                                 horizontal-alignment: right;
