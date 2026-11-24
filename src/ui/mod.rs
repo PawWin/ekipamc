@@ -187,13 +187,14 @@ impl Launcher {
                     Ok(status) if status.success() => {
                         app.global::<Store>().set_screen(Screen::Ready)
                     }
-                    Ok(status) => show_error(
-                        &app,
-                        format!(
-                            "Minecraft closed with an error ({status}).\n\nSend this file from the logs folder to the server admin:\n{}",
-                            log.file_name().unwrap_or_default().display()
-                        ),
-                    ),
+                    Ok(status) => {
+                        let file = log.file_name().unwrap_or_default().display();
+                        show_error(
+                            &app,
+                            format!("Minecraft stopped ({status}). Send this file from the logs folder to the server admin:"),
+                        );
+                        app.global::<Store>().set_error_file(file.to_string().into());
+                    }
                     Err(error) => show_error(&app, format!("{error:#}")),
                 }
             });
@@ -233,9 +234,11 @@ fn show_settings(app: &AppWindow, settings: &Settings, paths: &Paths) {
     });
 }
 
+/// Opens the error dialog. A crash additionally sets `error-file`.
 fn show_error(app: &AppWindow, message: String) {
     let store = app.global::<Store>();
     store.set_error_message(message.into());
+    store.set_error_file("".into());
     store.set_screen(Screen::Error);
     store.set_error_open(true);
 }

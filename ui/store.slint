@@ -46,6 +46,8 @@ export global Store {
     in property <string> detail;
     in property <float> fraction: -1;
     in property <string> error-message;
+    // Log file to send to the admin; set only when the game crashed.
+    in property <string> error-file;
     in-out property <bool> error-open;
 
     in-out property <string> nick;

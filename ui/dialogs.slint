@@ -1,8 +1,8 @@
 // Modal dialogs drawn over the whole window.
 
 import { Theme, Icons } from "theme.slint";
-import { Store } from "store.slint";
-import { Icon, Hint, Button, TextField } from "widgets.slint";
+import { Store, Screen } from "store.slint";
+import { Icon, Hint, Button, TextField, ProgressBar } from "widgets.slint";
 
 // Compact close button, flush with the dialog's right content edge.
 component CloseButton inherits Rectangle {
@@ -104,6 +104,36 @@ export component NickDialog inherits Modal {
             color: field.text == "" || Store.nick-valid(field.text) ? Theme.text-dim : Theme.danger;
         }
     }
+    // The scrim hides the bottom bar, so first start mirrors the progress here.
+    if Store.screen == Screen.installing: Rectangle {
+        background: #262626;
+        border-radius: 3px;
+        VerticalLayout {
+            padding: 12px;
+            spacing: 8px;
+            HorizontalLayout {
+                Text {
+                    text: Store.stage;
+                    color: Theme.text-muted;
+                    font-size: 13px;
+                    font-weight: 600;
+                    overflow: elide;
+                }
+                Text {
+                    text: Store.fraction < 0 ? Store.detail : round(Store.fraction * 100) + "%";
+                    color: Theme.green-text;
+                    font-size: 13px;
+                    font-weight: 600;
+                    horizontal-alignment: right;
+                }
+            }
+            ProgressBar {
+                height: 6px;
+                fraction: Store.fraction;
+                indeterminate: Store.fraction < 0;
+            }
+        }
+    }
     HorizontalLayout {
         spacing: 10px;
         alignment: end;
@@ -122,7 +152,7 @@ export component NickDialog inherits Modal {
 }
 
 export component ErrorDialog inherits Modal {
-    title: "Something went wrong";
+    title: Store.error-file == "" ? "Something went wrong" : "Minecraft closed unexpectedly";
     title-color: Theme.danger;
     close => { Store.error-open = false; }
 
@@ -131,6 +161,35 @@ export component ErrorDialog inherits Modal {
         color: Theme.text-muted;
         font-size: 14px;
         wrap: word-wrap;
+    }
+    if Store.error-file != "": HorizontalLayout {
+        alignment: start;
+        Rectangle {
+            background: #1a1a1a;
+            border-radius: 3px;
+            border-width: 1px;
+            border-color: #ffffff1c;
+            HorizontalLayout {
+                padding: 8px;
+                padding-left: 10px;
+                padding-right: 12px;
+                spacing: 8px;
+                Icon {
+                    outline: Icons.file;
+                    color: Theme.text-muted;
+                    width: 16px;
+                    height: 16px;
+                    y: (parent.height - self.height) / 2;
+                }
+                Text {
+                    text: Store.error-file;
+                    color: Theme.text;
+                    font-size: 14px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                }
+            }
+        }
     }
     HorizontalLayout {
         spacing: 10px;

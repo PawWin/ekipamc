@@ -22,12 +22,14 @@ export component PlayPage inherits Rectangle {
     Rectangle {
         y: parent.height * 0.35;
         height: parent.height * 0.65;
-        background: @linear-gradient(180deg, #00000000 0%, #00000080 50%, #000000dd 100%);
+        background: @linear-gradient(180deg, #00000000 0%, #00000040 50%, #00000090 100%);
     }
+    // Heavier on the left behind the headline, clear on the right so the
+    // cabin's windows stay lit.
     Rectangle {
-        width: parent.width * 0.7;
+        width: parent.width * 0.65;
         x: 0;
-        background: @linear-gradient(90deg, #00000090 0%, #00000000 100%);
+        background: @linear-gradient(90deg, #000000b0 0%, #00000070 50%, #00000000 100%);
     }
 
     VerticalLayout {
@@ -351,6 +353,7 @@ export component EditPage inherits Rectangle {
                                 read-only: Store.screen == Screen.installing;
                             }
                             Button {
+                                text: "Open";
                                 icon: Icons.folder;
                                 clicked => { Store.open-game-dir(); }
                             }
