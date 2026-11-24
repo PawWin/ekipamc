@@ -42,7 +42,7 @@ component PlayButton inherits Rectangle {
 
 export component AppWindow inherits Window {
     title: root.pack-name;
-    icon: @image-url("../assets/icon.svg");
+    icon: @image-url("../assets/icon.png");
     preferred-width: 720px;
     preferred-height: 440px;
     min-width: 560px;
@@ -82,7 +82,7 @@ export component AppWindow inherits Window {
         HorizontalLayout {
             spacing: 16px;
             Image {
-                source: @image-url("../assets/icon.svg");
+                source: @image-url("../assets/icon.png");
                 width: 56px;
                 height: 56px;
             }
