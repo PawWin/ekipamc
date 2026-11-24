@@ -38,8 +38,8 @@ Install the ATM10 release you want once, on your own machine, with the CurseForg
 
 ```sh
 cd path/to/instance/minecraft   # the folder that contains mods/
-zip -r ~/atm10-5.0.zip mods config defaultconfigs kubejs
-sha256sum ~/atm10-5.0.zip
+zip -r ~/atm10-8.6.zip mods config defaultconfigs kubejs shaderpacks resourcepacks datapacks local
+sha256sum ~/atm10-8.6.zip
 ```
 
 Add any other folders the pack ships (look at what's in the instance besides `saves`, `logs` and `crash-reports`). A `servers.dat` with our server in it is a nice touch, since it shows up in everyone's multiplayer list.
@@ -51,7 +51,7 @@ Leave `options.txt` out. On a pack update the launcher deletes `mods/` and overw
 The zip lives in its own GitHub release on this repo. Use a tag that doesn't start with `v`, so it doesn't trigger the launcher build:
 
 ```sh
-gh release create pack-5.0 ~/atm10-5.0.zip --title "Modpack ATM10 5.0" --latest=false
+gh release create pack-8.6 ~/atm10-8.6.zip --title "Modpack ATM10 8.6" --latest=false
 ```
 
 `--latest=false` keeps the launcher release as the one friends see first on the Releases page. Release assets can be up to 2 GB, and the repo has to be public so launchers can download without logging in.
@@ -59,11 +59,11 @@ gh release create pack-5.0 ~/atm10-5.0.zip --title "Modpack ATM10 5.0" --latest=
 ### 3. Fill in `pack.toml`
 
 ```toml
-neoforge = "21.1.xxx"   # the version in the pack's manifest.json
+neoforge = "21.1.266"   # the version in the pack's manifest.json
 
 [modpack]
-version = "atm10-5.0"
-url = "https://github.com/PawWin/ekipamc/releases/download/pack-5.0/atm10-5.0.zip"
+version = "8.6"
+url = "https://github.com/PawWin/ekipamc/releases/download/pack-8.6/atm10-8.6.zip"
 sha256 = "<from sha256sum>"
 ```
 
