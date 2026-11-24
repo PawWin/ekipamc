@@ -20,6 +20,7 @@ slint::include_modules!();
 struct Launcher {
     runtime: tokio::runtime::Handle,
     net: Net,
+    /// Data directory layout with the default game directory; see `game_paths`.
     paths: Paths,
     /// Source of truth for what is on disk; the UI shows a copy.
     settings: Arc<Mutex<Settings>>,
@@ -45,10 +46,10 @@ pub fn run() -> Result<()> {
     store.set_minecraft(pack.minecraft.as_str().into());
     store.set_neoforge(pack.neoforge.as_str().into());
     store.set_launcher_version(env!("CARGO_PKG_VERSION").into());
-    store.set_game_dir(short_path(&paths.instance()).into());
+    store.set_default_game_dir(short_path(&paths.instance()).into());
     store.set_min_ram_gb(settings::MIN_RAM_GB as i32);
     store.set_max_ram_gb(settings::MAX_RAM_GB as i32);
-    show_settings(&app, &saved);
+    show_settings(&app, &saved, &paths);
     // First start: ask for the nick while the download runs.
     store.set_nick_open(saved.nick.is_empty());
 
@@ -67,7 +68,7 @@ pub fn run() -> Result<()> {
     });
     store.on_save_profile({
         let launcher = launcher.clone();
-        move |profile| launcher.update_settings(|settings| settings.profile = profile.into())
+        move |profile| launcher.save_profile(profile.into())
     });
     store.on_save_options({
         let launcher = launcher.clone();
@@ -82,8 +83,12 @@ pub fn run() -> Result<()> {
         move || launcher.play()
     });
     store.on_open_game_dir({
-        let dir = launcher.paths.instance();
-        move || open_path(&dir)
+        let launcher = launcher.clone();
+        move || {
+            let dir = launcher.game_paths().instance();
+            std::fs::create_dir_all(&dir).ok();
+            open_path(&dir)
+        }
     });
     store.on_open_logs_dir({
         let dir = launcher.paths.logs();
@@ -116,7 +121,7 @@ impl Launcher {
         self.ui(|app| app.global::<Store>().set_screen(Screen::Installing));
         let this = self.clone();
         self.runtime.spawn(async move {
-            let result = install::install(&this.net, &this.paths, &PACK, &this).await;
+            let result = install::install(&this.net, &this.game_paths(), &PACK, &this).await;
             this.ui(move |app| match result {
                 Ok(()) => app.global::<Store>().set_screen(Screen::Ready),
                 Err(error) => show_error(&app, format!("{error:#}")),
@@ -131,19 +136,37 @@ impl Launcher {
         };
         let mut settings = self.settings.lock().unwrap();
         change(&mut settings);
-        show_settings(&app, &settings);
+        show_settings(&app, &settings, &self.paths);
         if let Err(error) = settings.save(&self.paths.settings()) {
             show_error(&app, format!("Cannot save settings: {error:#}"));
         }
     }
 
+    /// Saves the installation; a new game directory gets the modpack
+    /// installed into it right away.
+    fn save_profile(&self, profile: settings::Profile) {
+        let moved = self.settings.lock().unwrap().profile.game_dir != profile.game_dir;
+        self.update_settings(|settings| settings.profile = profile);
+        if moved {
+            self.start_install();
+        }
+    }
+
+    /// Paths with the player's game directory applied.
+    fn game_paths(&self) -> Paths {
+        let settings = self.settings.lock().unwrap();
+        self.paths
+            .with_instance(settings.profile.game_dir.as_deref())
+    }
+
     fn play(&self) {
         let settings = self.settings.lock().unwrap().clone();
+        let paths = self.game_paths();
         self.ui(|app| app.global::<Store>().set_screen(Screen::Running));
 
         let this = self.clone();
         self.runtime.spawn(async move {
-            let result = match launch::start(&this.paths, &PACK, &settings) {
+            let result = match launch::start(&paths, &PACK, &settings) {
                 Ok(mut child) => {
                     if settings.launcher.open_log {
                         open_path(&this.log_file());
@@ -195,8 +218,12 @@ impl Progress for Launcher {
 }
 
 /// Copies saved settings into the window.
-fn show_settings(app: &AppWindow, settings: &Settings) {
+fn show_settings(app: &AppWindow, settings: &Settings, paths: &Paths) {
     let store = app.global::<Store>();
+    let game_dir = paths
+        .with_instance(settings.profile.game_dir.as_deref())
+        .instance();
+    store.set_game_dir(short_path(&game_dir).into());
     store.set_nick(settings.nick.as_str().into());
     store.set_avatar(avatar::face(&settings.nick));
     store.set_profile((&settings.profile).into());
@@ -241,26 +268,22 @@ impl From<&settings::Profile> for Profile {
             height: profile.resolution.map_or(0, |r| r.height as i32),
             fullscreen: profile.fullscreen,
             jvm_args: profile.jvm_args.as_str().into(),
-            java_path: profile
-                .java_path
-                .as_ref()
-                .map(|path| path.display().to_string())
-                .unwrap_or_default()
-                .into(),
+            java_path: path_text(profile.java_path.as_deref()).into(),
+            game_dir: path_text(profile.game_dir.as_deref()).into(),
         }
     }
 }
 
 impl From<Profile> for settings::Profile {
     fn from(profile: Profile) -> Self {
-        let java_path = profile.java_path.trim();
         Self {
             name: profile.name.trim().into(),
             ram_gb: (profile.ram_gb.max(0) as u32)
                 .clamp(settings::MIN_RAM_GB, settings::MAX_RAM_GB),
             fullscreen: profile.fullscreen,
             jvm_args: profile.jvm_args.trim().into(),
-            java_path: (!java_path.is_empty()).then(|| java_path.into()),
+            java_path: typed_path(&profile.java_path),
+            game_dir: typed_path(&profile.game_dir),
             resolution: (profile.width > 0 && profile.height > 0).then_some(Resolution {
                 width: profile.width as u32,
                 height: profile.height as u32,
@@ -275,5 +298,20 @@ impl From<LauncherOptions> for settings::LauncherOptions {
             keep_open: options.keep_open,
             open_log: options.open_log,
         }
+    }
+}
+
+fn path_text(path: Option<&Path>) -> String {
+    path.map(|path| path.display().to_string())
+        .unwrap_or_default()
+}
+
+/// A path typed into a field: empty means unset, `~/` means home.
+fn typed_path(text: &str) -> Option<PathBuf> {
+    let text = text.trim();
+    match (text.strip_prefix("~/"), dirs::home_dir()) {
+        _ if text.is_empty() => None,
+        (Some(rest), Some(home)) => Some(home.join(rest)),
+        _ => Some(text.into()),
     }
 }

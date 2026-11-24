@@ -22,7 +22,7 @@ export component PlayPage inherits Rectangle {
     Rectangle {
         y: parent.height * 0.35;
         height: parent.height * 0.65;
-        background: @linear-gradient(180deg, #00000000 0%, #000000c8 100%);
+        background: @linear-gradient(180deg, #00000000 0%, #00000080 50%, #000000dd 100%);
     }
     Rectangle {
         width: parent.width * 0.7;
@@ -31,7 +31,9 @@ export component PlayPage inherits Rectangle {
     }
 
     VerticalLayout {
-        padding: 40px;
+        // Same left inset as the header title and tabs.
+        padding: 32px;
+        padding-bottom: 36px;
         alignment: end;
         spacing: 10px;
         HorizontalLayout {
@@ -40,11 +42,25 @@ export component PlayPage inherits Rectangle {
                 text: Store.pack-version == "" ? "MODPACK" : "MODPACK " + Store.pack-version;
             }
         }
-        Text {
-            text: Store.profile.name;
-            color: white;
-            font-family: Theme.display-font;
-            font-size: 44px;
+        // Pixel title with a hard drop shadow, like Minecraft's own text.
+        Rectangle {
+            height: title.preferred-height;
+            Text {
+                x: 3px;
+                y: 3px;
+                text: title.text;
+                color: #000000b0;
+                font-family: title.font-family;
+                font-size: title.font-size;
+            }
+            title := Text {
+                x: 0;
+                y: 0;
+                text: Store.profile.name;
+                color: white;
+                font-family: Theme.display-font;
+                font-size: 44px;
+            }
         }
         // A max-width here would cap the whole window column, so the text
         // is sized inside a plain container instead.
@@ -226,6 +242,7 @@ export component EditPage inherits Rectangle {
             fullscreen: fullscreen.checked,
             jvm-args: jvm-field.text,
             java-path: java-field.text,
+            game-dir: dir-field.text,
         });
         Store.page = Page.installations;
     }
@@ -280,7 +297,10 @@ export component EditPage inherits Rectangle {
                         width: root.half;
                         caption: "VERSION";
                         ReadOnlyBox {
-                            text: Store.pack-label + "  ·  NeoForge " + Store.neoforge;
+                            text: Store.pack-label + "  ·  Minecraft " + Store.minecraft;
+                        }
+                        Hint {
+                            text: "NeoForge " + Store.neoforge + ", set by the server admin.";
                         }
                     }
                     Field {
@@ -288,13 +308,20 @@ export component EditPage inherits Rectangle {
                         caption: "GAME DIRECTORY";
                         HorizontalLayout {
                             spacing: 8px;
-                            ReadOnlyBox {
-                                text: Store.game-dir;
+                            dir-field := TextField {
+                                text: Store.profile.game-dir;
+                                placeholder: Store.default-game-dir;
+                                // Moving it reinstalls the pack; not mid-install.
+                                read-only: Store.screen == Screen.installing;
                             }
                             Button {
                                 icon: Icons.folder;
                                 clicked => { Store.open-game-dir(); }
                             }
+                        }
+                        Hint {
+                            text: Store.screen == Screen.installing ? "Can be changed once the install finishes."
+                                : "Empty means default. A new folder gets a fresh pack.";
                         }
                     }
                 }
@@ -330,6 +357,7 @@ export component EditPage inherits Rectangle {
                                 alignment: TextHorizontalAlignment.center;
                                 invalid: !root.height-ok;
                             }
+                            Rectangle { width: 8px; }
                             fullscreen := CheckBox {
                                 text: "Fullscreen";
                                 checked: Store.profile.fullscreen;
@@ -371,10 +399,12 @@ export component EditPage inherits Rectangle {
                             Hint {
                                 text: "8 to 10 GB recommended";
                                 horizontal-alignment: center;
+                                horizontal-stretch: 1;
                             }
                             Hint {
                                 text: Store.max-ram-gb + " GB";
                                 horizontal-stretch: 0;
+                                horizontal-alignment: right;
                             }
                             // Keeps the max label under the slider's end, not the value.
                             Rectangle { width: 68px; }
@@ -413,6 +443,11 @@ export component EditPage inherits Rectangle {
         Rectangle {
             height: 72px;
             background: Theme.header;
+            Rectangle {
+                y: 0;
+                height: 1px;
+                background: Theme.divider;
+            }
             HorizontalLayout {
                 padding-left: 32px;
                 padding-right: 32px;

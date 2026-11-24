@@ -27,6 +27,9 @@ pub struct Profile {
     pub jvm_args: String,
     /// Java to run instead of the bundled runtime.
     pub java_path: Option<PathBuf>,
+    /// Game directory instead of `instance/` in the data directory. A new
+    /// directory gets its own copy of the modpack on the next install.
+    pub game_dir: Option<PathBuf>,
     /// Initial window size; `None` lets the game pick.
     pub resolution: Option<Resolution>,
 }
@@ -56,6 +59,7 @@ impl Default for Profile {
             fullscreen: false,
             jvm_args: String::new(),
             java_path: None,
+            game_dir: None,
             resolution: None,
         }
     }
@@ -115,6 +119,7 @@ mod tests {
             },
             profile: Profile {
                 java_path: Some("/opt/java/bin/java".into()),
+                game_dir: Some("/games/ekipacraft".into()),
                 resolution: Some(Resolution {
                     width: 1920,
                     height: 1080,

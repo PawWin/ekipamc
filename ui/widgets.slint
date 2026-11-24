@@ -42,8 +42,8 @@ export component Button inherits Rectangle {
     in property <length> font-size: 14px;
     callback clicked;
 
-    min-height: 38px;
-    min-width: 38px;
+    min-height: 40px;
+    min-width: 40px;
     horizontal-stretch: 0;
     border-radius: 3px;
     background: !root.enabled ? (root.primary ? Theme.green.transparentize(0.7) : #353535)
@@ -264,11 +264,13 @@ export component Slider inherits Rectangle {
     }
 }
 
-// Pixel-style badge, e.g. "DEFAULT".
+// Small outlined label, e.g. "DEFAULT". Kept dark so the green Play button
+// stays the only bright green on screen.
 export component Badge inherits Rectangle {
     in property <string> text;
-    in property <color> tint: Theme.green;
-    background: root.tint;
+    background: #1c1c1cd8;
+    border-width: 1px;
+    border-color: Theme.green-text;
     border-radius: 2px;
     HorizontalLayout {
         padding-left: 7px;
@@ -277,7 +279,7 @@ export component Badge inherits Rectangle {
         padding-bottom: 2px;
         Text {
             text: root.text;
-            color: white;
+            color: Theme.green-text;
             font-size: 11px;
             font-weight: 700;
             letter-spacing: 0.6px;

@@ -50,6 +50,12 @@ export component Sidebar inherits Rectangle {
     width: 248px;
     background: Theme.sidebar;
 
+    Rectangle {
+        x: parent.width - 1px;
+        width: 1px;
+        background: #00000055;
+    }
+
     VerticalLayout {
         // Account
         // As tall as the page header so the two dividers line up.
@@ -197,8 +203,10 @@ component Tab inherits Rectangle {
     in property <bool> active;
     callback clicked;
 
-    min-width: label.preferred-width + 8px;
+    // Label flush left so tabs share the title's left edge.
+    min-width: label.preferred-width;
     label := Text {
+        x: 0;
         y: 8px;
         text: root.text;
         color: root.active ? Theme.text : touch.has-hover ? Theme.text : Theme.text-muted;
@@ -208,6 +216,7 @@ component Tab inherits Rectangle {
     Rectangle {
         y: parent.height - self.height;
         height: 3px;
+        x: 0;
         width: label.width;
         background: root.active ? Theme.green-text : transparent;
     }
@@ -234,7 +243,7 @@ export component PageHeader inherits Rectangle {
             text: root.title;
             color: Theme.text;
             font-family: Theme.display-font;
-            font-size: 28px;
+            font-size: 30px;
         }
         if root.tabs: HorizontalLayout {
             spacing: 28px;
@@ -272,26 +281,34 @@ export component PlayButton inherits Rectangle {
     in property <bool> busy;
     callback clicked;
 
+    property <bool> raised: root.enabled && !root.busy && !touch.pressed;
+
     width: 280px;
     height: 64px;
-    border-radius: 4px;
+    border-radius: 2px;
     background: root.busy ? Theme.green-pressed
         : !root.enabled ? #3b4a37
         : touch.pressed ? Theme.green-pressed : touch.has-hover ? Theme.green-hover : Theme.green;
     animate background { duration: 100ms; }
-    drop-shadow-blur: root.enabled ? 12px : 0px;
-    drop-shadow-color: #3c852740;
 
+    // Bevel: light top edge, dark bottom edge; both flatten when pressed.
+    Rectangle {
+        y: 0;
+        height: root.raised ? 2px : 0px;
+        background: #ffffff38;
+        border-top-left-radius: 2px;
+        border-top-right-radius: 2px;
+    }
     Rectangle {
         y: parent.height - self.height;
-        height: touch.pressed || !root.enabled ? 0px : 5px;
-        background: Theme.green-edge;
-        border-bottom-left-radius: 4px;
-        border-bottom-right-radius: 4px;
+        height: root.raised ? 5px : root.busy ? 3px : 0px;
+        background: root.busy ? #1d3a15 : Theme.green-edge;
+        border-bottom-left-radius: 2px;
+        border-bottom-right-radius: 2px;
     }
 
     Text {
-        y: (parent.height - self.height) / 2 - (touch.pressed || !root.enabled ? 0px : 2px);
+        y: (parent.height - self.height) / 2 - (root.raised ? 2px : 0px);
         text: root.text;
         color: root.enabled || root.busy ? white : #a5b3a0;
         font-family: Theme.display-font;
@@ -308,7 +325,7 @@ export component PlayButton inherits Rectangle {
 
 // Installation picker, Play button (or install progress) and account.
 export component BottomBar inherits Rectangle {
-    height: 104px;
+    height: 92px;
     background: Theme.bar;
 
     Rectangle {
@@ -359,7 +376,7 @@ export component BottomBar inherits Rectangle {
                             }
                         }
                         Icon {
-                            outline: Icons.chevron-down;
+                            outline: Icons.chevron-right;
                             color: Theme.text-muted;
                             width: 18px;
                             height: 18px;
@@ -456,11 +473,6 @@ export component BottomBar inherits Rectangle {
                                     font-size: 12px;
                                 }
                             }
-                        }
-                        Avatar {
-                            face: Store.avatar;
-                            size: 40px;
-                            y: (parent.height - self.height) / 2;
                         }
                     }
                     nick-touch := TouchArea {

@@ -98,6 +98,7 @@ fn fill(store: &Store) {
     store.set_neoforge("21.1.266".into());
     store.set_launcher_version(env!("CARGO_PKG_VERSION").into());
     store.set_game_dir("~/.local/share/ekipamc/instance".into());
+    store.set_default_game_dir("~/.local/share/ekipamc/instance".into());
     store.set_min_ram_gb(4);
     store.set_max_ram_gb(16);
     store.set_screen(Screen::Ready);
@@ -109,6 +110,7 @@ fn fill(store: &Store) {
         fullscreen: false,
         jvm_args: "".into(),
         java_path: "".into(),
+        game_dir: "".into(),
     });
     store.set_options(LauncherOptions {
         keep_open: true,

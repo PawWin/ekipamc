@@ -17,6 +17,8 @@ export struct Profile {
     jvm-args: string,
     // Empty means the bundled Java runtime.
     java-path: string,
+    // Empty means `default-game-dir`.
+    game-dir: string,
 }
 
 export struct LauncherOptions {
@@ -32,7 +34,9 @@ export global Store {
     in property <string> minecraft;
     in property <string> neoforge;
     in property <string> launcher-version;
+    // Effective and default game directory, shortened for display.
     in property <string> game-dir;
+    in property <string> default-game-dir;
 
     in-out property <Screen> screen: Screen.installing;
     in-out property <Page> page: Page.play;

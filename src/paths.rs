@@ -1,5 +1,6 @@
 //! On-disk layout. The root mirrors a `.minecraft` folder so the NeoForge
-//! installer can target it directly; the game itself runs in `instance/`.
+//! installer can target it directly; the game itself runs in `instance/`
+//! unless the player picks another game directory.
 
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
@@ -7,6 +8,7 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Clone)]
 pub struct Paths {
     pub root: PathBuf,
+    instance: PathBuf,
 }
 
 impl Paths {
@@ -17,7 +19,18 @@ impl Paths {
             .join(id);
         std::fs::create_dir_all(&root)
             .with_context(|| format!("cannot create {}", root.display()))?;
-        Ok(Self { root })
+        Ok(Self {
+            instance: root.join("instance"),
+            root,
+        })
+    }
+
+    /// The same layout with `dir` as the game directory, if given.
+    pub fn with_instance(&self, dir: Option<&Path>) -> Self {
+        Self {
+            root: self.root.clone(),
+            instance: dir.map_or_else(|| self.root.join("instance"), Path::to_path_buf),
+        }
     }
 
     pub fn libraries(&self) -> PathBuf {
@@ -42,7 +55,7 @@ impl Paths {
 
     /// The game directory: mods, config, saves, options.txt.
     pub fn instance(&self) -> PathBuf {
-        self.root.join("instance")
+        self.instance.clone()
     }
 
     pub fn natives(&self) -> PathBuf {
