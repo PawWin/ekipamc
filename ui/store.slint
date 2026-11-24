@@ -48,6 +48,8 @@ export global Store {
     in property <string> error-message;
     // Log file to send to the admin; set only when the game crashed.
     in property <string> error-file;
+    // Muted technical detail under the file, e.g. the exit status.
+    in property <string> error-detail;
     in-out property <bool> error-open;
 
     in-out property <string> nick;

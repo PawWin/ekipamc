@@ -191,9 +191,11 @@ impl Launcher {
                         let file = log.file_name().unwrap_or_default().display();
                         show_error(
                             &app,
-                            format!("Minecraft stopped ({status}). Send this file from the logs folder to the server admin:"),
+                            "Send this log from the logs folder to the server admin:".into(),
                         );
-                        app.global::<Store>().set_error_file(file.to_string().into());
+                        let store = app.global::<Store>();
+                        store.set_error_file(file.to_string().into());
+                        store.set_error_detail(format!("Minecraft stopped ({status}).").into());
                     }
                     Err(error) => show_error(&app, format!("{error:#}")),
                 }
@@ -239,6 +241,7 @@ fn show_error(app: &AppWindow, message: String) {
     let store = app.global::<Store>();
     store.set_error_message(message.into());
     store.set_error_file("".into());
+    store.set_error_detail("".into());
     store.set_screen(Screen::Error);
     store.set_error_open(true);
 }

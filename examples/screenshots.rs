@@ -79,10 +79,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     shoot("07-running", &|store| store.set_screen(Screen::Running))?;
     shoot("08-error", &|store| {
         store.set_screen(Screen::Error);
-        store.set_error_message(
-            "Minecraft stopped (exit status: 1). Send this file from the logs folder to the server admin:".into(),
-        );
+        store.set_error_message("Send this log from the logs folder to the server admin:".into());
         store.set_error_file("game-output.log".into());
+        store.set_error_detail("Minecraft stopped (exit status: 1).".into());
         store.set_error_open(true);
     })?;
     shoot("09-change-nick", &|store| store.set_nick_open(true))?;

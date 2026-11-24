@@ -114,7 +114,7 @@ export component NickDialog inherits Modal {
             HorizontalLayout {
                 Text {
                     text: Store.stage;
-                    color: Theme.text-muted;
+                    color: Theme.text;
                     font-size: 13px;
                     font-weight: 600;
                     overflow: elide;
@@ -170,6 +170,7 @@ export component ErrorDialog inherits Modal {
         wrap: word-wrap;
     }
     if Store.error-file != "": HorizontalLayout {
+        // The file to send; the exit status goes underneath, muted.
         alignment: start;
         Rectangle {
             background: #1a1a1a;
@@ -197,6 +198,12 @@ export component ErrorDialog inherits Modal {
                 }
             }
         }
+    }
+    if Store.error-detail != "": Text {
+        text: Store.error-detail;
+        color: Theme.text-dim;
+        font-size: 13px;
+        wrap: word-wrap;
     }
     HorizontalLayout {
         spacing: 10px;

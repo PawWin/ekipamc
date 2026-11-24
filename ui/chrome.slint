@@ -47,7 +47,7 @@ component SideItem inherits Rectangle {
 }
 
 export component Sidebar inherits Rectangle {
-    width: 248px;
+    width: 216px;
     background: Theme.sidebar;
 
     Rectangle {
@@ -64,18 +64,18 @@ export component Sidebar inherits Rectangle {
             background: account-touch.has-hover ? #252525 : transparent;
             HorizontalLayout {
                 padding-left: 16px;
-                padding-right: 16px;
-                spacing: 12px;
+                padding-right: 14px;
+                spacing: 10px;
                 Avatar {
                     face: Store.avatar;
-                    size: 48px;
+                    size: 40px;
                     y: (parent.height - self.height) / 2;
                 }
                 VerticalLayout {
                     alignment: center;
                     spacing: 1px;
                     Text {
-                        text: Store.nick == "" ? "No nickname yet" : Store.nick;
+                        text: Store.nick == "" ? "Set nickname" : Store.nick;
                         color: Theme.text;
                         font-size: 15px;
                         font-weight: 700;

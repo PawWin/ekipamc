@@ -27,9 +27,12 @@ export component PlayPage inherits Rectangle {
     // Heavier on the left behind the headline, clear on the right so the
     // cabin's windows stay lit.
     Rectangle {
-        width: parent.width * 0.65;
-        x: 0;
-        background: @linear-gradient(90deg, #000000b0 0%, #00000070 50%, #00000000 100%);
+        // Soft pool centred on the bottom-left corner: no seams in the sky.
+        x: -parent.width * 0.45;
+        y: parent.height * 0.2;
+        width: parent.width * 1.1;
+        height: parent.height * 1.6;
+        background: @radial-gradient(circle, #000000b0 0%, #00000080 35%, #00000018 60%, #00000000 72%);
     }
 
     VerticalLayout {
@@ -150,6 +153,7 @@ component InstallationRow inherits Rectangle {
                 clicked => { Store.open-game-dir(); }
             }
             Button {
+                text: "Edit";
                 icon: Icons.pencil;
                 enabled: Store.screen != Screen.running;
                 clicked => { Store.page = Page.edit; }
@@ -165,17 +169,11 @@ export component InstallationsPage inherits Rectangle {
         padding: 32px;
         spacing: 16px;
         alignment: start;
-        VerticalLayout {
-            spacing: 4px;
-            Text {
-                text: "1 installation";
-                color: Theme.text;
-                font-size: 15px;
-                font-weight: 700;
-            }
-            Hint {
-                text: "This launcher plays one modpack. Edit it to change its name, folder, memory, window size and Java options.";
-            }
+        Text {
+            text: "1 installation";
+            color: Theme.text;
+            font-size: 15px;
+            font-weight: 700;
         }
         InstallationRow { }
     }
