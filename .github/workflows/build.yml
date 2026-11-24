@@ -1,12 +1,11 @@
-# Builds the launcher for Linux and Windows. Pushing a `v*` tag also
-# attaches both binaries to a GitHub release.
+# Pushing a `v*` tag builds the launcher for Linux and Windows and attaches
+# both binaries to that tag's GitHub release. Other tags (like the modpack
+# release) don't trigger it.
 name: build
 
 on:
   push:
-    branches: [main]
     tags: ["v*"]
-  pull_request:
 
 permissions:
   contents: write
@@ -34,12 +33,7 @@ jobs:
       - run: cargo build --release
       - run: mv target/release/${{ matrix.binary }} ${{ matrix.asset }}
         shell: bash
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.asset }}
-          path: ${{ matrix.asset }}
-      - if: startsWith(github.ref, 'refs/tags/v')
-        run: gh release create "$GITHUB_REF_NAME" --generate-notes 2>/dev/null; gh release upload "$GITHUB_REF_NAME" ${{ matrix.asset }} --clobber
+      - run: gh release create "$GITHUB_REF_NAME" --generate-notes 2>/dev/null; gh release upload "$GITHUB_REF_NAME" ${{ matrix.asset }} --clobber
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}

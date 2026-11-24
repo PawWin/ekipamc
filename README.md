@@ -46,9 +46,15 @@ Add any other folders the pack ships (look at what's in the instance besides `sa
 
 Leave `options.txt` out. On a pack update the launcher deletes `mods/` and overwrites every file the zip contains. Files the zip doesn't contain are left alone, so players keep their settings and worlds.
 
-### 2. Host it
+### 2. Host it as a release
 
-Any HTTPS URL works. A GitHub release on this repo is the easy option (assets can be up to 2 GB). The box running the server works too.
+The zip lives in its own GitHub release on this repo. Use a tag that doesn't start with `v`, so it doesn't trigger the launcher build:
+
+```sh
+gh release create pack-5.0 ~/atm10-5.0.zip --title "Modpack ATM10 5.0" --latest=false
+```
+
+`--latest=false` keeps the launcher release as the one friends see first on the Releases page. Release assets can be up to 2 GB, and the repo has to be public so launchers can download without logging in.
 
 ### 3. Fill in `pack.toml`
 
@@ -57,7 +63,7 @@ neoforge = "21.1.xxx"   # the version in the pack's manifest.json
 
 [modpack]
 version = "atm10-5.0"
-url = "https://github.com/<you>/ekipamc/releases/download/pack-5.0/atm10-5.0.zip"
+url = "https://github.com/PawWin/ekipamc/releases/download/pack-5.0/atm10-5.0.zip"
 sha256 = "<from sha256sum>"
 ```
 
@@ -65,7 +71,7 @@ sha256 = "<from sha256sum>"
 
 ### 4. Release the launcher
 
-Push a `v*` tag. CI builds `ekipamc-linux-x86_64` and `ekipamc-windows-x86_64.exe` and attaches them to the release.
+Commit the filled-in `pack.toml`, then push a `v*` tag. That's the only thing that runs CI: it builds `ekipamc-linux-x86_64` and `ekipamc-windows-x86_64.exe` and attaches them to the tag's release.
 
 ```sh
 git tag v1.0.0 && git push origin v1.0.0
