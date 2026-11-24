@@ -1,0 +1,538 @@
+// Page bodies: Play (hero art), Installations, Edit installation, Settings.
+
+import { ScrollView } from "std-widgets.slint";
+import { Theme, Icons } from "theme.slint";
+import { Store, Screen, Page, Profile, LauncherOptions } from "store.slint";
+import { Icon, Caption, Hint, Button, TextField, CheckBox, Slider, Badge } from "widgets.slint";
+
+export component PlayPage inherits Rectangle {
+    background: #10151f;
+    clip: true;
+
+    Image {
+        source: @image-url("../assets/hero.png");
+        width: 100%;
+        height: 100%;
+        image-fit: cover;
+        image-rendering: pixelated;
+    }
+
+    // Darken the lower part so the headline stays readable.
+    Rectangle {
+        y: parent.height * 0.45;
+        height: parent.height * 0.55;
+        background: @linear-gradient(180deg, #00000000 0%, #000000b0 100%);
+    }
+
+    VerticalLayout {
+        padding: 40px;
+        alignment: end;
+        spacing: 10px;
+        HorizontalLayout {
+            alignment: start;
+            Badge {
+                text: Store.pack-version == "" ? "MODPACK" : "MODPACK " + Store.pack-version;
+            }
+        }
+        Text {
+            text: Store.profile.name;
+            color: white;
+            font-family: Theme.display-font;
+            font-size: 44px;
+        }
+        // A max-width here would cap the whole window column, so the text
+        // is sized inside a plain container instead.
+        Rectangle {
+            height: blurb.preferred-height;
+            blurb := Text {
+                x: 0;
+                width: min(parent.width, 560px);
+                text: Store.pack-subtitle + " on Minecraft " + Store.minecraft + " with NeoForge " + Store.neoforge
+                    + ". Updates install themselves; your worlds and settings stay put.";
+                color: #e6e6e6;
+                font-size: 15px;
+                wrap: word-wrap;
+            }
+        }
+    }
+}
+
+component InstallationRow inherits Rectangle {
+    min-height: 88px;
+    border-radius: 4px;
+    background: touch.has-hover ? Theme.card-hover : Theme.card;
+    animate background { duration: 100ms; }
+
+    touch := TouchArea {
+        double-clicked => { Store.page = Page.edit; }
+    }
+
+    HorizontalLayout {
+        padding: 16px;
+        spacing: 16px;
+        Image {
+            source: @image-url("../assets/icon.png");
+            width: 56px;
+            height: 56px;
+            y: (parent.height - self.height) / 2;
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 4px;
+            HorizontalLayout {
+                spacing: 10px;
+                alignment: start;
+                Text {
+                    text: Store.profile.name;
+                    color: Theme.text;
+                    font-size: 16px;
+                    font-weight: 700;
+                    vertical-alignment: center;
+                }
+                VerticalLayout {
+                    alignment: center;
+                    Badge {
+                        text: "DEFAULT";
+                    }
+                }
+            }
+            Text {
+                text: Store.pack-label + "  ·  Minecraft " + Store.minecraft + "  ·  NeoForge " + Store.neoforge;
+                color: Theme.text-muted;
+                font-size: 13px;
+            }
+            Text {
+                text: Store.profile.ram-gb + " GB memory  ·  "
+                    + (Store.profile.fullscreen ? "Fullscreen"
+                        : Store.profile.width > 0 && Store.profile.height > 0 ? Store.profile.width + " × " + Store.profile.height
+                        : "Default window size")
+                    + "  ·  " + (Store.profile.java-path == "" ? "Bundled Java" : "Custom Java");
+                color: Theme.text-dim;
+                font-size: 12px;
+            }
+        }
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: end;
+            padding-top: 9px;
+            padding-bottom: 9px;
+            Button {
+                text: "Play";
+                primary: true;
+                enabled: Store.screen == Screen.ready;
+                clicked => { Store.start-game(); }
+            }
+            Button {
+                icon: Icons.folder;
+                clicked => { Store.open-game-dir(); }
+            }
+            Button {
+                icon: Icons.pencil;
+                enabled: Store.screen != Screen.running;
+                clicked => { Store.page = Page.edit; }
+            }
+        }
+    }
+}
+
+export component InstallationsPage inherits Rectangle {
+    background: Theme.content;
+
+    VerticalLayout {
+        padding: 32px;
+        spacing: 16px;
+        alignment: start;
+        HorizontalLayout {
+            Text {
+                text: "1 installation";
+                color: Theme.text-muted;
+                font-size: 13px;
+                vertical-alignment: center;
+            }
+            Hint {
+                text: "Set by the server admin";
+                horizontal-alignment: right;
+                vertical-alignment: center;
+            }
+        }
+        InstallationRow { }
+        Hint {
+            text: "This launcher plays one modpack. Edit the installation to change its name, memory, window size and Java options.";
+        }
+    }
+}
+
+// Caption plus the control under it.
+component Field inherits VerticalLayout {
+    in property <string> caption;
+    spacing: 8px;
+    Caption {
+        text: root.caption;
+    }
+    @children
+}
+
+// Two fields side by side.
+component Columns inherits HorizontalLayout {
+    spacing: 24px;
+}
+
+component ReadOnlyBox inherits Rectangle {
+    in property <string> text;
+    in property <string> icon: Icons.lock;
+    min-height: 40px;
+    border-radius: 3px;
+    background: #222222;
+    border-width: 2px;
+    border-color: #3d3d3d;
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 10px;
+        Text {
+            text: root.text;
+            color: Theme.text-muted;
+            font-size: 14px;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        Icon {
+            outline: root.icon;
+            color: Theme.text-dim;
+            width: 16px;
+            height: 16px;
+            y: (parent.height - self.height) / 2;
+        }
+    }
+}
+
+// Edits a copy of the profile; nothing is stored until Save.
+export component EditPage inherits Rectangle {
+    background: Theme.content;
+
+    property <bool> width-ok: width-field.text == "" || width-field.text.to-float() >= 1;
+    property <bool> height-ok: height-field.text == "" || height-field.text.to-float() >= 1;
+    property <bool> resolution-ok: root.width-ok && root.height-ok
+        && (width-field.text == "") == (height-field.text == "");
+    property <bool> can-save: name-field.text != "" && root.resolution-ok;
+    property <int> ram: Store.profile.ram-gb;
+    // Column width for the two-column rows (page padding and gap removed).
+    property <length> half: (root.width - 64px - 24px) / 2;
+
+    function save() {
+        Store.save-profile({
+            name: name-field.text,
+            ram-gb: root.ram,
+            width: width-field.text == "" ? 0 : width-field.text.to-float(),
+            height: height-field.text == "" ? 0 : height-field.text.to-float(),
+            fullscreen: fullscreen.checked,
+            jvm-args: jvm-field.text,
+            java-path: java-field.text,
+        });
+        Store.page = Page.installations;
+    }
+
+    VerticalLayout {
+        ScrollView {
+            VerticalLayout {
+                padding: 32px;
+                padding-top: 24px;
+                padding-bottom: 24px;
+                spacing: 18px;
+                alignment: start;
+
+                HorizontalLayout {
+                    spacing: 12px;
+                    alignment: start;
+                    Button {
+                        icon: Icons.chevron-left;
+                        clicked => { Store.page = Page.installations; }
+                    }
+                    Text {
+                        text: "Edit installation";
+                        color: Theme.text;
+                        font-size: 20px;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 20px;
+                    Image {
+                        source: @image-url("../assets/icon.png");
+                        width: 64px;
+                        height: 64px;
+                    }
+                    Field {
+                        caption: "NAME";
+                        name-field := TextField {
+                            text: Store.profile.name;
+                            placeholder: "EkipaCraft";
+                            invalid: self.text == "";
+                        }
+                    }
+                }
+
+                Columns {
+                    Field {
+                        width: root.half;
+                        caption: "VERSION";
+                        ReadOnlyBox {
+                            text: Store.pack-label + "  ·  NeoForge " + Store.neoforge;
+                        }
+                    }
+                    Field {
+                        width: root.half;
+                        caption: "GAME DIRECTORY";
+                        HorizontalLayout {
+                            spacing: 8px;
+                            ReadOnlyBox {
+                                text: Store.game-dir;
+                            }
+                            Button {
+                                icon: Icons.folder;
+                                clicked => { Store.open-game-dir(); }
+                            }
+                        }
+                    }
+                }
+
+                Columns {
+                    Field {
+                        width: root.half;
+                        caption: "RESOLUTION";
+                        HorizontalLayout {
+                            spacing: 10px;
+                            alignment: start;
+                            width-field := TextField {
+                                width: 88px;
+                                horizontal-stretch: 0;
+                                text: Store.profile.width > 0 ? Store.profile.width : "";
+                                placeholder: "Auto";
+                                input-type: InputType.number;
+                                alignment: TextHorizontalAlignment.center;
+                                invalid: !root.width-ok;
+                            }
+                            Text {
+                                text: "×";
+                                color: Theme.text-dim;
+                                font-size: 16px;
+                                vertical-alignment: center;
+                            }
+                            height-field := TextField {
+                                width: 88px;
+                                horizontal-stretch: 0;
+                                text: Store.profile.height > 0 ? Store.profile.height : "";
+                                placeholder: "Auto";
+                                input-type: InputType.number;
+                                alignment: TextHorizontalAlignment.center;
+                                invalid: !root.height-ok;
+                            }
+                            fullscreen := CheckBox {
+                                text: "Fullscreen";
+                                checked: Store.profile.fullscreen;
+                            }
+                        }
+                        Hint {
+                            text: root.resolution-ok ? "Window size in pixels. Empty means default." : "Enter both width and height, or neither.";
+                            color: root.resolution-ok ? Theme.text-dim : Theme.danger;
+                        }
+                    }
+                    Field {
+                        width: root.half;
+                        caption: "MEMORY";
+                        HorizontalLayout {
+                            spacing: 16px;
+                            Slider {
+                                // Match the text fields so the hints line up.
+                                min-height: 40px;
+                                minimum: Store.min-ram-gb;
+                                maximum: Store.max-ram-gb;
+                                value: root.ram;
+                                changed(value) => { root.ram = value; }
+                            }
+                            Text {
+                                text: root.ram + " GB";
+                                color: Theme.text;
+                                font-size: 15px;
+                                font-weight: 700;
+                                min-width: 52px;
+                                horizontal-alignment: right;
+                                vertical-alignment: center;
+                            }
+                        }
+                        Hint {
+                            text: "All the Mods 10 runs best with 8 to 10 GB.";
+                        }
+                    }
+                }
+
+                Columns {
+                    Field {
+                        width: root.half;
+                        caption: "JAVA EXECUTABLE";
+                        java-field := TextField {
+                            text: Store.profile.java-path;
+                            placeholder: "Bundled Java runtime (recommended)";
+                        }
+                        Hint {
+                            text: "Full path to java, or empty for the bundled one.";
+                        }
+                    }
+                    Field {
+                        width: root.half;
+                        caption: "JVM ARGUMENTS";
+                        jvm-field := TextField {
+                            text: Store.profile.jvm-args;
+                            placeholder: "-XX:+UseG1GC -XX:MaxGCPauseMillis=50";
+                        }
+                        Hint {
+                            text: "Added after the memory setting.";
+                        }
+                    }
+                }
+            }
+        }
+
+        // Action strip, always visible under the form.
+        Rectangle {
+            height: 72px;
+            background: Theme.header;
+            HorizontalLayout {
+                padding-left: 32px;
+                padding-right: 32px;
+                padding-top: 16px;
+                padding-bottom: 16px;
+                spacing: 10px;
+                alignment: end;
+                Button {
+                    text: "Cancel";
+                    clicked => { Store.page = Page.installations; }
+                }
+                Button {
+                    text: "Save";
+                    primary: true;
+                    enabled: root.can-save;
+                    clicked => { root.save(); }
+                }
+            }
+        }
+    }
+}
+
+component Section inherits VerticalLayout {
+    in property <string> title;
+    spacing: 14px;
+    Text {
+        text: root.title;
+        color: Theme.text;
+        font-size: 16px;
+        font-weight: 700;
+    }
+    @children
+}
+
+component InfoRow inherits HorizontalLayout {
+    in property <string> label;
+    in property <string> value;
+    spacing: 16px;
+    horizontal-stretch: 1;
+    Text {
+        text: root.label;
+        color: Theme.text-muted;
+        font-size: 14px;
+        width: 140px;
+        vertical-alignment: center;
+    }
+    Text {
+        text: root.value;
+        color: Theme.text;
+        font-size: 14px;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+}
+
+export component SettingsPage inherits Rectangle {
+    background: Theme.content;
+
+    function save-options() {
+        Store.save-options({ keep-open: keep-open.checked, open-log: open-log.checked });
+    }
+
+    ScrollView {
+        VerticalLayout {
+            padding: 32px;
+            spacing: 28px;
+            alignment: start;
+
+            Section {
+                title: "General";
+                keep-open := CheckBox {
+                    text: "Keep the launcher open while the game is running";
+                    checked: Store.options.keep-open;
+                    toggled => { root.save-options(); }
+                }
+                open-log := CheckBox {
+                    text: "Open the output log when the game starts";
+                    checked: Store.options.open-log;
+                    toggled => { root.save-options(); }
+                }
+            }
+
+            Rectangle {
+                height: 1px;
+                background: Theme.divider;
+            }
+
+            Section {
+                title: "Account";
+                HorizontalLayout {
+                    spacing: 16px;
+                    InfoRow {
+                        label: "Nickname";
+                        value: Store.nick == "" ? "Not set" : Store.nick;
+                    }
+                    Button {
+                        text: Store.nick == "" ? "Set nickname" : "Change";
+                        icon: Icons.pencil;
+                        clicked => { Store.nick-open = true; }
+                    }
+                }
+                Hint {
+                    text: "The server is in offline mode: your nick is your account. Keep it the same to keep your inventory.";
+                }
+            }
+
+            Rectangle {
+                height: 1px;
+                background: Theme.divider;
+            }
+
+            Section {
+                title: "About";
+                InfoRow {
+                    label: "Launcher";
+                    value: Store.launcher-name + " " + Store.launcher-version;
+                }
+                InfoRow {
+                    label: "Modpack";
+                    value: Store.pack-label;
+                }
+                HorizontalLayout {
+                    spacing: 16px;
+                    InfoRow {
+                        label: "Game directory";
+                        value: Store.game-dir;
+                    }
+                    Button {
+                        text: "Open";
+                        icon: Icons.folder;
+                        clicked => { Store.open-game-dir(); }
+                    }
+                }
+            }
+        }
+    }
+}

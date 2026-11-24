@@ -1,0 +1,120 @@
+// Modal dialogs drawn over the whole window.
+
+import { Theme, Icons } from "theme.slint";
+import { Store, Screen } from "store.slint";
+import { Icon, Hint, Button, TextField, Avatar } from "widgets.slint";
+
+component Modal inherits Rectangle {
+    in property <string> title;
+    in property <color> title-color: Theme.text;
+    in property <bool> closable: true;
+    callback close;
+
+    background: #000000b0;
+    // Swallow clicks so the page underneath stays inert.
+    TouchArea { }
+
+    Rectangle {
+        width: 460px;
+        height: body.preferred-height;
+        border-radius: 6px;
+        background: Theme.card;
+        border-width: 1px;
+        border-color: #ffffff14;
+        drop-shadow-blur: 30px;
+        drop-shadow-color: #000000a0;
+
+        body := VerticalLayout {
+            padding: 28px;
+            spacing: 16px;
+            HorizontalLayout {
+                Text {
+                    text: root.title;
+                    color: root.title-color;
+                    font-size: 20px;
+                    font-weight: 700;
+                    vertical-alignment: center;
+                }
+                if root.closable: Button {
+                    icon: Icons.close;
+                    flat: true;
+                    clicked => { root.close(); }
+                }
+            }
+            @children
+        }
+    }
+}
+
+export component NickDialog inherits Modal {
+    title: Store.nick == "" ? "Choose your nickname" : "Change nickname";
+    closable: Store.nick != "";
+    close => { Store.nick-open = false; }
+
+    function submit() {
+        if Store.nick-valid(field.text) {
+            Store.save-nick(field.text);
+            Store.nick-open = false;
+        }
+    }
+
+    init => { field.focus(); }
+
+    Hint {
+        text: "This is your name on the server. Pick the same one every time to keep your inventory.";
+    }
+    field := TextField {
+        text: Store.nick;
+        placeholder: "Nickname";
+        invalid: self.text != "" && !Store.nick-valid(self.text);
+        accepted => { root.submit(); }
+    }
+    Hint {
+        text: "3-16 characters: letters, digits and _";
+        color: field.text == "" || Store.nick-valid(field.text) ? Theme.text-dim : Theme.danger;
+    }
+    HorizontalLayout {
+        spacing: 10px;
+        alignment: end;
+        if Store.nick != "": Button {
+            text: "Cancel";
+            clicked => { Store.nick-open = false; }
+        }
+        Button {
+            text: "Save";
+            primary: true;
+            enabled: Store.nick-valid(field.text);
+            clicked => { root.submit(); }
+        }
+    }
+}
+
+export component ErrorDialog inherits Modal {
+    title: "Something went wrong";
+    title-color: Theme.danger;
+    close => { Store.error-open = false; }
+
+    Text {
+        text: Store.error-message;
+        color: Theme.text-muted;
+        font-size: 14px;
+        wrap: word-wrap;
+    }
+    HorizontalLayout {
+        spacing: 10px;
+        alignment: end;
+        Button {
+            text: "Open game folder";
+            icon: Icons.folder;
+            clicked => { Store.open-game-dir(); }
+        }
+        Button {
+            text: "Try again";
+            primary: true;
+            clicked => {
+                Store.error-open = false;
+                Store.retry();
+            }
+        }
+    }
+}
