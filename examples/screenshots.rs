@@ -91,9 +91,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// The state a returning player sees: installed, nick set, default profile.
 fn fill(store: &Store) {
     store.set_launcher_name("EkipaMC".into());
-    store.set_pack_subtitle("All the Mods 10".into());
-    store.set_pack_version("8.6".into());
-    store.set_minecraft("1.21.1".into());
+    store.set_pack_subtitle("All the Mods 11".into());
+    store.set_pack_version("0.15.0-beta".into());
+    store.set_minecraft("26.1.2".into());
     store.set_neoforge("21.1.266".into());
     store.set_launcher_version(env!("CARGO_PKG_VERSION").into());
     store.set_game_dir("~/.local/share/ekipamc/instance".into());

@@ -1,5 +1,5 @@
-//! Installs the Java runtime Mojang ships for the version (e.g. Java 21 for
-//! 1.21.1), so players don't need Java installed themselves.
+//! Installs the Java runtime Mojang ships for the version (e.g. Java 25 for
+//! 26.1.2), so players don't need Java installed themselves.
 
 use crate::net::{Download, Net};
 use crate::paths::Paths;

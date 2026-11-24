@@ -54,7 +54,7 @@ impl Default for Profile {
     fn default() -> Self {
         Self {
             name: "EkipaCraft".into(),
-            // ATM10 recommends 8-10 GB.
+            // ATM11 recommends 6 GB; 8 leaves headroom for shaders.
             ram_gb: 8,
             fullscreen: false,
             jvm_args: String::new(),

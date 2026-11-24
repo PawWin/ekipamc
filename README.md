@@ -9,7 +9,7 @@ The pack is baked in. A player opens the launcher, waits for the first download,
 ## What happens on start
 
 1. Download the Minecraft version file from Mojang.
-2. Install the Java runtime Mojang ships for that version (Java 21 for 1.21.1).
+2. Install the Java runtime Mojang ships for that version (Java 25 for 26.1.2).
 3. Run the official NeoForge installer headlessly.
 4. Download libraries, the client jar and assets (about 3900 small files).
 5. Download the modpack zip, check its sha256 and unpack it into `instance/`.
@@ -38,12 +38,12 @@ Everything a season needs lives in [`pack.toml`](pack.toml). It's compiled into 
 
 ### 1. Build the modpack zip
 
-Install the ATM10 release you want once, on your own machine, with the CurseForge app or Prism Launcher. Then zip the instance folder contents so `mods/`, `config/` and friends sit at the root of the zip:
+Install the ATM11 release you want once, on your own machine, with the CurseForge app or Prism Launcher. Then zip the instance folder contents so `mods/`, `config/` and friends sit at the root of the zip:
 
 ```sh
 cd path/to/instance/minecraft   # the folder that contains mods/
-zip -r ~/atm10-8.6.zip mods config defaultconfigs kubejs shaderpacks resourcepacks datapacks local
-sha256sum ~/atm10-8.6.zip
+zip -r ~/atm11-0.15.0-beta.zip mods config kubegroovy local shaderpacks resourcepacks
+sha256sum ~/atm11-0.15.0-beta.zip
 ```
 
 Add any other folders the pack ships (look at what's in the instance besides `saves`, `logs` and `crash-reports`). A `servers.dat` with our server in it is a nice touch, since it shows up in everyone's multiplayer list.
@@ -55,7 +55,7 @@ Leave `options.txt` out. On a pack update the launcher deletes `mods/` and overw
 The zip lives in its own GitHub release on this repo. Use a tag that doesn't start with `v`, so it doesn't trigger the launcher build:
 
 ```sh
-gh release create pack-8.6 ~/atm10-8.6.zip --title "Modpack ATM10 8.6" --latest=false
+gh release create pack-atm11-0.15.0-beta ~/atm11-0.15.0-beta.zip --title "Modpack ATM11 0.15.0-beta" --latest=false
 ```
 
 `--latest=false` keeps the launcher release as the one friends see first on the Releases page. Release assets can be up to 2 GB, and the repo has to be public so launchers can download without logging in.
@@ -63,11 +63,11 @@ gh release create pack-8.6 ~/atm10-8.6.zip --title "Modpack ATM10 8.6" --latest=
 ### 3. Fill in `pack.toml`
 
 ```toml
-neoforge = "21.1.266"   # the version in the pack's manifest.json
+neoforge = "26.1.2.126"   # the version in the pack's manifest.json
 
 [modpack]
-version = "8.6"
-url = "https://github.com/PawWin/ekipamc/releases/download/pack-8.6/atm10-8.6.zip"
+version = "0.15.0-beta"
+url = "https://github.com/PawWin/ekipamc/releases/download/pack-atm11-0.15.0-beta/atm11-0.15.0-beta.zip"
 sha256 = "<from sha256sum>"
 ```
 

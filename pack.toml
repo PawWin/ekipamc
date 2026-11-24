@@ -3,16 +3,16 @@
 # Name of the data directory (~/.local/share/<id> on Linux, %APPDATA%\<id> on Windows).
 id = "ekipamc"
 name = "EkipaMC"
-subtitle = "All the Mods 10"
+subtitle = "All the Mods 11"
 
-minecraft = "1.21.1"
+minecraft = "26.1.2"
 # Must match the NeoForge version the modpack was made for
-# (see "neoforge-..." in the CurseForge manifest.json of the ATM10 release).
-neoforge = "21.1.266"
+# (see "neoforge-..." in the CurseForge manifest.json of the ATM11 release).
+neoforge = "26.1.2.126"
 
 # The hosted modpack zip. Leave this section out to launch plain NeoForge.
-# The zip holds the instance folders at its root: mods/, config/, defaultconfigs/, kubejs/, ...
+# The zip holds the instance folders at its root: mods/, config/, kubegroovy/, ...
 [modpack]
-version = "8.6"
-url = "https://github.com/PawWin/ekipamc/releases/download/pack-8.6/atm10-8.6.zip"
-sha256 = "21ad7ea04af3cf35d27925f2cbb3b515822151bbb33564abc3614e72d0db07bb"
+version = "0.15.0-beta"
+url = "https://github.com/PawWin/ekipamc/releases/download/pack-atm11-0.15.0-beta/atm11-0.15.0-beta.zip"
+sha256 = "044705e708ca69a2c3cefd80d34fd3d9df7de709ca5bcce132cb279a24dc32af"
