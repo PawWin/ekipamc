@@ -489,7 +489,7 @@ component InfoRow inherits HorizontalLayout {
     in property <string> value;
     spacing: 16px;
     min-height: 40px;
-    horizontal-stretch: 1;
+    alignment: start;
     Text {
         text: root.label;
         color: Theme.text-muted;
@@ -497,7 +497,10 @@ component InfoRow inherits HorizontalLayout {
         width: 140px;
         vertical-alignment: center;
     }
+    // Fixed width so a row's button sits next to its value, at the same x
+    // in every row, while dividers still run the full page width.
     Text {
+        width: 360px;
         text: root.value;
         color: Theme.text;
         font-size: 14px;
@@ -516,8 +519,6 @@ export component SettingsPage inherits Rectangle {
     ScrollView {
         VerticalLayout {
             padding: 32px;
-            // Keep a readable line length; actions stay near their labels.
-            padding-right: max(32px, root.width - 32px - 720px);
             spacing: 28px;
             alignment: start;
 
@@ -544,6 +545,7 @@ export component SettingsPage inherits Rectangle {
                 title: "Account";
                 HorizontalLayout {
                     spacing: 16px;
+                    alignment: start;
                     InfoRow {
                         label: "Nickname";
                         value: Store.nick == "" ? "Not set" : Store.nick;
@@ -577,6 +579,7 @@ export component SettingsPage inherits Rectangle {
                 }
                 HorizontalLayout {
                     spacing: 16px;
+                    alignment: start;
                     InfoRow {
                         label: "Game directory";
                         value: Store.game-dir;

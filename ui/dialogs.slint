@@ -119,8 +119,9 @@ export component NickDialog inherits Modal {
                     font-weight: 600;
                     overflow: elide;
                 }
+                // Same grammar as the Play bar: percentage right, detail below.
                 Text {
-                    text: Store.fraction < 0 ? Store.detail : round(Store.fraction * 100) + "%";
+                    text: Store.fraction < 0 ? "" : round(Store.fraction * 100) + "%";
                     color: Theme.green-text;
                     font-size: 13px;
                     font-weight: 600;
@@ -131,6 +132,12 @@ export component NickDialog inherits Modal {
                 height: 6px;
                 fraction: Store.fraction;
                 indeterminate: Store.fraction < 0;
+            }
+            if Store.detail != "": Text {
+                text: Store.detail;
+                color: Theme.text-dim;
+                font-size: 12px;
+                overflow: elide;
             }
         }
     }

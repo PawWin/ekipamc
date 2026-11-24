@@ -90,8 +90,8 @@ export component Sidebar inherits Rectangle {
                 Icon {
                     outline: Icons.pencil;
                     color: Theme.text-muted;
-                    width: 16px;
-                    height: 16px;
+                    width: 18px;
+                    height: 18px;
                     y: (parent.height - self.height) / 2;
                 }
             }
@@ -342,10 +342,12 @@ export component BottomBar inherits Rectangle {
         padding-right: 32px;
         spacing: 24px;
 
-        // Installation
+        // Installation. Both side columns share the same fixed basis so the
+        // centre slot sits exactly mid-bar whatever their content is.
         Rectangle {
             horizontal-stretch: 1;
-            min-width: 200px;
+            min-width: 240px;
+            preferred-width: 0px;
             HorizontalLayout {
                 alignment: start;
                 padding-top: 16px;
@@ -446,14 +448,17 @@ export component BottomBar inherits Rectangle {
         // Account
         Rectangle {
             horizontal-stretch: 1;
-            min-width: 200px;
+            min-width: 240px;
+            preferred-width: 0px;
             HorizontalLayout {
                 alignment: end;
                 Rectangle {
                     border-radius: 3px;
                     background: nick-touch.has-hover ? #2c2c2c : transparent;
                     HorizontalLayout {
+                        // No right padding: the name ends on the 32px inset.
                         padding: 8px;
+                        padding-right: 0px;
                         spacing: 12px;
                         VerticalLayout {
                             alignment: center;
