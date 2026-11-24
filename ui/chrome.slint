@@ -52,8 +52,9 @@ export component Sidebar inherits Rectangle {
 
     VerticalLayout {
         // Account
+        // As tall as the page header so the two dividers line up.
         account := Rectangle {
-            height: 76px;
+            height: 104px;
             background: account-touch.has-hover ? #252525 : transparent;
             HorizontalLayout {
                 padding-left: 16px;
@@ -61,7 +62,7 @@ export component Sidebar inherits Rectangle {
                 spacing: 12px;
                 Avatar {
                     face: Store.avatar;
-                    size: 40px;
+                    size: 48px;
                     y: (parent.height - self.height) / 2;
                 }
                 VerticalLayout {
@@ -216,11 +217,12 @@ component Tab inherits Rectangle {
     }
 }
 
-// Title strip above the page. Tabs show only for the game pages.
+// Title strip above the page: tabs on the game pages, a note otherwise.
 export component PageHeader inherits Rectangle {
     in property <string> title;
     in property <bool> tabs;
-    height: root.tabs ? 104px : 80px;
+    in property <string> note;
+    height: 104px;
     background: Theme.header;
 
     VerticalLayout {
@@ -232,7 +234,7 @@ export component PageHeader inherits Rectangle {
             text: root.title;
             color: Theme.text;
             font-family: Theme.display-font;
-            font-size: 26px;
+            font-size: 28px;
         }
         if root.tabs: HorizontalLayout {
             spacing: 28px;
@@ -249,7 +251,11 @@ export component PageHeader inherits Rectangle {
                 clicked => { Store.page = Page.installations; }
             }
         }
-        if !root.tabs: Rectangle { }
+        if !root.tabs: Text {
+            text: root.note;
+            color: Theme.text-dim;
+            font-size: 13px;
+        }
     }
 
     Rectangle {
@@ -263,12 +269,14 @@ export component PageHeader inherits Rectangle {
 export component PlayButton inherits Rectangle {
     in property <string> text;
     in property <bool> enabled: true;
+    in property <bool> busy;
     callback clicked;
 
     width: 280px;
     height: 64px;
     border-radius: 4px;
-    background: !root.enabled ? #3b4a37
+    background: root.busy ? Theme.green-pressed
+        : !root.enabled ? #3b4a37
         : touch.pressed ? Theme.green-pressed : touch.has-hover ? Theme.green-hover : Theme.green;
     animate background { duration: 100ms; }
     drop-shadow-blur: root.enabled ? 12px : 0px;
@@ -285,10 +293,10 @@ export component PlayButton inherits Rectangle {
     Text {
         y: (parent.height - self.height) / 2 - (touch.pressed || !root.enabled ? 0px : 2px);
         text: root.text;
-        color: root.enabled ? white : #a5b3a0;
+        color: root.enabled || root.busy ? white : #a5b3a0;
         font-family: Theme.display-font;
         font-size: 24px;
-        letter-spacing: 2px;
+        letter-spacing: 1px;
     }
 
     touch := TouchArea {
@@ -368,7 +376,7 @@ export component BottomBar inherits Rectangle {
 
         // Center: progress while installing, otherwise the Play button.
         Rectangle {
-            width: 340px;
+            width: 280px;
             if Store.screen == Screen.installing: VerticalLayout {
                 alignment: center;
                 spacing: 8px;
@@ -401,6 +409,8 @@ export component BottomBar inherits Rectangle {
             }
             if Store.screen != Screen.installing: PlayButton {
                 text: Store.screen == Screen.running ? "PLAYING" : Store.screen == Screen.error ? "RETRY" : "PLAY";
+                // Reads "busy" rather than "disabled" while the game runs.
+                busy: Store.screen == Screen.running;
                 enabled: Store.screen != Screen.running;
                 clicked => {
                     if Store.screen == Screen.error { Store.retry(); } else { Store.start-game(); }
@@ -430,11 +440,21 @@ export component BottomBar inherits Rectangle {
                                 font-weight: 700;
                                 horizontal-alignment: right;
                             }
-                            Text {
-                                text: Store.screen == Screen.running ? "In game" : "Offline account";
-                                color: Theme.text-dim;
-                                font-size: 12px;
-                                horizontal-alignment: right;
+                            HorizontalLayout {
+                                alignment: end;
+                                spacing: 6px;
+                                if Store.screen == Screen.running: Rectangle {
+                                    width: 8px;
+                                    height: 8px;
+                                    y: (parent.height - self.height) / 2;
+                                    border-radius: 4px;
+                                    background: Theme.green-text;
+                                }
+                                Text {
+                                    text: Store.screen == Screen.running ? "In game" : "Offline account";
+                                    color: Store.screen == Screen.running ? Theme.green-text : Theme.text-dim;
+                                    font-size: 12px;
+                                }
                             }
                         }
                         Avatar {

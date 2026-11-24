@@ -97,7 +97,7 @@ fn fill(store: &Store) {
     store.set_minecraft("1.21.1".into());
     store.set_neoforge("21.1.266".into());
     store.set_launcher_version(env!("CARGO_PKG_VERSION").into());
-    store.set_game_dir("/home/kotek/.local/share/ekipamc/instance".into());
+    store.set_game_dir("~/.local/share/ekipamc/instance".into());
     store.set_min_ram_gb(4);
     store.set_max_ram_gb(16);
     store.set_screen(Screen::Ready);

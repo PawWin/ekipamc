@@ -25,12 +25,14 @@ export component AppWindow inherits Window {
             PageHeader {
                 title: Store.page == Page.settings ? "LAUNCHER SETTINGS" : Store.pack-subtitle.to-uppercase();
                 tabs: Store.page != Page.settings;
+                note: "Changes are saved automatically";
             }
             if Store.page == Page.play: PlayPage { }
             if Store.page == Page.installations: InstallationsPage { }
             if Store.page == Page.edit: EditPage { }
             if Store.page == Page.settings: SettingsPage { }
-            if Store.page != Page.edit: BottomBar { }
+            // Like the official launcher, only the Play tab has the Play bar.
+            if Store.page == Page.play: BottomBar { }
         }
     }
 

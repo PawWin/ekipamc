@@ -45,7 +45,7 @@ pub fn run() -> Result<()> {
     store.set_minecraft(pack.minecraft.as_str().into());
     store.set_neoforge(pack.neoforge.as_str().into());
     store.set_launcher_version(env!("CARGO_PKG_VERSION").into());
-    store.set_game_dir(paths.instance().display().to_string().into());
+    store.set_game_dir(short_path(&paths.instance()).into());
     store.set_min_ram_gb(settings::MIN_RAM_GB as i32);
     store.set_max_ram_gb(settings::MAX_RAM_GB as i32);
     show_settings(&app, &saved);
@@ -84,6 +84,13 @@ pub fn run() -> Result<()> {
     store.on_open_game_dir({
         let dir = launcher.paths.instance();
         move || open_path(&dir)
+    });
+    store.on_open_logs_dir({
+        let dir = launcher.paths.logs();
+        move || {
+            std::fs::create_dir_all(&dir).ok();
+            open_path(&dir)
+        }
     });
 
     launcher.start_install();
@@ -204,6 +211,15 @@ fn show_error(app: &AppWindow, message: String) {
     store.set_error_message(message.into());
     store.set_screen(Screen::Error);
     store.set_error_open(true);
+}
+
+/// `path` with the home directory written as `~` on Unix, so it fits on screen.
+fn short_path(path: &Path) -> String {
+    let home = dirs::home_dir().filter(|_| cfg!(unix));
+    match home.and_then(|home| path.strip_prefix(home).ok()) {
+        Some(rest) => format!("~/{}", rest.display()),
+        None => path.display().to_string(),
+    }
 }
 
 /// Opens a folder or file with the system's default app.

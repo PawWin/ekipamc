@@ -104,12 +104,12 @@ export component ErrorDialog inherits Modal {
         spacing: 10px;
         alignment: end;
         Button {
-            text: "Open game folder";
+            text: "Open logs folder";
             icon: Icons.folder;
-            clicked => { Store.open-game-dir(); }
+            clicked => { Store.open-logs-dir(); }
         }
         Button {
-            text: "Try again";
+            text: "Retry";
             primary: true;
             clicked => {
                 Store.error-open = false;

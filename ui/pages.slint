@@ -17,11 +17,17 @@ export component PlayPage inherits Rectangle {
         image-rendering: pixelated;
     }
 
-    // Darken the lower part so the headline stays readable.
+    // Scrims from the bottom and the left keep the headline readable over
+    // the busy foreground, like the official launcher's hero.
     Rectangle {
-        y: parent.height * 0.45;
-        height: parent.height * 0.55;
-        background: @linear-gradient(180deg, #00000000 0%, #000000b0 100%);
+        y: parent.height * 0.35;
+        height: parent.height * 0.65;
+        background: @linear-gradient(180deg, #00000000 0%, #000000c8 100%);
+    }
+    Rectangle {
+        width: parent.width * 0.7;
+        x: 0;
+        background: @linear-gradient(90deg, #00000090 0%, #00000000 100%);
     }
 
     VerticalLayout {
@@ -117,7 +123,7 @@ component InstallationRow inherits Rectangle {
             padding-top: 9px;
             padding-bottom: 9px;
             Button {
-                text: "Play";
+                text: Store.screen == Screen.installing ? "Installing…" : Store.screen == Screen.running ? "Playing" : "Play";
                 primary: true;
                 enabled: Store.screen == Screen.ready;
                 clicked => { Store.start-game(); }
@@ -142,18 +148,10 @@ export component InstallationsPage inherits Rectangle {
         padding: 32px;
         spacing: 16px;
         alignment: start;
-        HorizontalLayout {
-            Text {
-                text: "1 installation";
-                color: Theme.text-muted;
-                font-size: 13px;
-                vertical-alignment: center;
-            }
-            Hint {
-                text: "Set by the server admin";
-                horizontal-alignment: right;
-                vertical-alignment: center;
-            }
+        Text {
+            text: "1 installation";
+            color: Theme.text-muted;
+            font-size: 13px;
         }
         InstallationRow { }
         Hint {
@@ -259,10 +257,13 @@ export component EditPage inherits Rectangle {
 
                 HorizontalLayout {
                     spacing: 20px;
-                    Image {
-                        source: @image-url("../assets/icon.png");
-                        width: 64px;
-                        height: 64px;
+                    VerticalLayout {
+                        alignment: center;
+                        Image {
+                            source: @image-url("../assets/icon.png");
+                            width: 56px;
+                            height: 56px;
+                        }
                     }
                     Field {
                         caption: "NAME";
@@ -362,8 +363,21 @@ export component EditPage inherits Rectangle {
                                 vertical-alignment: center;
                             }
                         }
-                        Hint {
-                            text: "All the Mods 10 runs best with 8 to 10 GB.";
+                        HorizontalLayout {
+                            Hint {
+                                text: Store.min-ram-gb + " GB";
+                                horizontal-stretch: 0;
+                            }
+                            Hint {
+                                text: "8 to 10 GB recommended";
+                                horizontal-alignment: center;
+                            }
+                            Hint {
+                                text: Store.max-ram-gb + " GB";
+                                horizontal-stretch: 0;
+                            }
+                            // Keeps the max label under the slider's end, not the value.
+                            Rectangle { width: 68px; }
                         }
                     }
                 }

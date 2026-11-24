@@ -13,9 +13,13 @@ The pack is baked in. A player opens the launcher, waits for the first download,
 3. Run the official NeoForge installer headlessly.
 4. Download libraries, the client jar and assets (about 3900 small files).
 5. Download the modpack zip, check its sha256 and unpack it into `instance/`.
-6. Ask for a nick the first time, then show the Play screen.
+6. Show the Play button. On the very first start, the nick dialog opens right away, while the download runs.
 
 Each step skips work that's already done. After the first run, start-up takes milliseconds and works offline.
+
+The window follows the layout of the official Minecraft launcher: account and game in the sidebar, Play and Installations tabs, and the Play button in the bottom bar. The pack shows up as one installation, **EkipaCraft**, which players can edit like a vanilla launcher profile: name, memory, window size, fullscreen, Java executable and extra JVM arguments. The pack version is baked in and shown read-only. Launcher settings cover keeping the launcher open while the game runs and opening the output log on start.
+
+The nick, the installation and the launcher settings are saved to `settings.toml` in the data directory, so players type their nick once.
 
 Accounts are offline-mode. The nick becomes the player name, and the UUID is the same one an offline server computes (`OfflinePlayer:<nick>`), so inventories stay tied to the nick.
 
@@ -95,15 +99,20 @@ Offline mode means anyone can claim any nick, so keep the whitelist on and only 
 ```sh
 cargo run      # the launcher
 cargo test     # unit tests
+cargo run --example screenshots -- shots/   # render every view to PNG, headless
 ```
+
+The screenshot example draws each view with fake state (no install, no display needed) and encodes PNGs with ImageMagick's `magick`. Use it to review UI changes.
 
 Linux builds need the fontconfig headers (`libfontconfig1-dev` on Debian/Ubuntu). Set `XDG_DATA_HOME` to a scratch folder to test a fresh install without touching your real one.
 
 | Path                   | Purpose                                                     |
 | ---------------------- | ----------------------------------------------------------- |
 | `pack.toml`            | Baked season config                                         |
-| `ui/app.slint`         | The window                                                  |
-| `src/ui.rs`            | Connects UI callbacks to install/launch tasks               |
+| `ui/app.slint`         | The window; `ui/` also holds the pages, dialogs and widgets |
+| `src/ui/`              | Connects UI callbacks to install/launch tasks               |
+| `src/settings.rs`      | Nick, EkipaCraft installation and launcher options on disk  |
+| `assets/`              | Icon, hero art, bundled fonts (OFL, licenses next to them)  |
 | `src/install/`         | Java, Minecraft files, NeoForge installer, modpack          |
 | `src/game/version.rs`  | Version JSON parsing, inheritance and OS rules              |
 | `src/game/launch.rs`   | Command line, offline UUID, starting Java                   |
