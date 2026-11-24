@@ -89,7 +89,7 @@ export component Sidebar inherits Rectangle {
                 }
                 Icon {
                     outline: Icons.pencil;
-                    color: Theme.text-dim;
+                    color: Theme.text-muted;
                     width: 16px;
                     height: 16px;
                     y: (parent.height - self.height) / 2;
@@ -286,7 +286,7 @@ export component PlayButton inherits Rectangle {
     width: 280px;
     height: 64px;
     border-radius: 2px;
-    background: root.busy ? Theme.green-pressed
+    background: root.busy ? Theme.green.transparentize(0.7)
         : !root.enabled ? #3b4a37
         : touch.pressed ? Theme.green-pressed : touch.has-hover ? Theme.green-hover : Theme.green;
     animate background { duration: 100ms; }
@@ -301,8 +301,8 @@ export component PlayButton inherits Rectangle {
     }
     Rectangle {
         y: parent.height - self.height;
-        height: root.raised ? 5px : root.busy ? 3px : 0px;
-        background: root.busy ? #1d3a15 : Theme.green-edge;
+        height: root.raised ? 5px : 0px;
+        background: Theme.green-edge;
         border-bottom-left-radius: 2px;
         border-bottom-right-radius: 2px;
     }
@@ -310,7 +310,7 @@ export component PlayButton inherits Rectangle {
     Text {
         y: (parent.height - self.height) / 2 - (root.raised ? 2px : 0px);
         text: root.text;
-        color: root.enabled || root.busy ? white : #a5b3a0;
+        color: root.busy ? #ffffff8c : root.enabled ? white : #a5b3a0;
         font-family: Theme.display-font;
         font-size: 24px;
         letter-spacing: 1px;
@@ -345,9 +345,14 @@ export component BottomBar inherits Rectangle {
             min-width: 200px;
             HorizontalLayout {
                 alignment: start;
+                padding-top: 16px;
+                padding-bottom: 16px;
+                // Inset so it reads as a control, not a label.
                 Rectangle {
                     border-radius: 3px;
-                    background: install-touch.has-hover ? #2c2c2c : transparent;
+                    background: install-touch.has-hover ? #333333 : #282828;
+                    border-width: 1px;
+                    border-color: #ffffff14;
                     HorizontalLayout {
                         padding: 8px;
                         padding-right: 12px;
@@ -370,14 +375,14 @@ export component BottomBar inherits Rectangle {
                                 max-width: 180px;
                             }
                             Text {
-                                text: Store.pack-label;
+                                text: "Manage installation";
                                 color: Theme.text-dim;
                                 font-size: 12px;
                             }
                         }
                         Icon {
                             outline: Icons.chevron-right;
-                            color: Theme.text-muted;
+                            color: Theme.text;
                             width: 18px;
                             height: 18px;
                             y: (parent.height - self.height) / 2;

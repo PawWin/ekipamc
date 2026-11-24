@@ -27,7 +27,10 @@ component Modal inherits Rectangle {
         body := VerticalLayout {
             padding: 28px;
             spacing: 16px;
+            // Fixed height so titles sit at the same offset with or without
+            // the close button.
             HorizontalLayout {
+                height: 40px;
                 Text {
                     horizontal-stretch: 1;
                     text: root.title;
@@ -73,7 +76,7 @@ export component NickDialog inherits Modal {
         accepted => { root.submit(); }
     }
     Hint {
-        text: "3-16 characters: letters, digits and _";
+        text: "3-16 characters: letters, digits and underscores";
         color: field.text == "" || Store.nick-valid(field.text) ? Theme.text-dim : Theme.danger;
     }
     HorizontalLayout {

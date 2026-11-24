@@ -190,8 +190,8 @@ impl Launcher {
                     Ok(status) => show_error(
                         &app,
                         format!(
-                            "Minecraft closed with an error ({status}).\nSend {} to the server admin.",
-                            log.display()
+                            "Minecraft closed with an error ({status}).\n\nSend this file from the logs folder to the server admin:\n{}",
+                            log.file_name().unwrap_or_default().display()
                         ),
                     ),
                     Err(error) => show_error(&app, format!("{error:#}")),

@@ -80,7 +80,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     shoot("08-error", &|store| {
         store.set_screen(Screen::Error);
         store.set_error_message(
-            "Minecraft closed with an error (exit status: 1).\nSend ~/.local/share/ekipamc/logs/game-output.log to the server admin."
+            "Minecraft closed with an error (exit status: 1).\n\nSend this file from the logs folder to the server admin:\ngame-output.log"
                 .into(),
         );
         store.set_error_open(true);

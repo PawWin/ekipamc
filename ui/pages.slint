@@ -69,8 +69,7 @@ export component PlayPage inherits Rectangle {
             blurb := Text {
                 x: 0;
                 width: min(parent.width, 560px);
-                text: Store.pack-subtitle + " on Minecraft " + Store.minecraft + " with NeoForge " + Store.neoforge
-                    + ". Updates install themselves; your worlds and settings stay put.";
+                text: Store.pack-subtitle + "  ·  Minecraft " + Store.minecraft;
                 color: #e6e6e6;
                 font-size: 15px;
                 wrap: word-wrap;
@@ -164,15 +163,19 @@ export component InstallationsPage inherits Rectangle {
         padding: 32px;
         spacing: 16px;
         alignment: start;
-        Text {
-            text: "1 installation";
-            color: Theme.text-muted;
-            font-size: 13px;
+        VerticalLayout {
+            spacing: 4px;
+            Text {
+                text: "1 installation";
+                color: Theme.text;
+                font-size: 15px;
+                font-weight: 700;
+            }
+            Hint {
+                text: "This launcher plays one modpack. Edit it to change its name, folder, memory, window size and Java options.";
+            }
         }
         InstallationRow { }
-        Hint {
-            text: "This launcher plays one modpack. Edit the installation to change its name, memory, window size and Java options.";
-        }
     }
 }
 
@@ -180,6 +183,8 @@ export component InstallationsPage inherits Rectangle {
 component Field inherits VerticalLayout {
     in property <string> caption;
     spacing: 8px;
+    // Fields keep their height when a neighbour in the row is taller.
+    alignment: start;
     Caption {
         text: root.caption;
     }
@@ -251,9 +256,9 @@ export component EditPage inherits Rectangle {
         ScrollView {
             VerticalLayout {
                 padding: 32px;
-                padding-top: 24px;
-                padding-bottom: 24px;
-                spacing: 18px;
+                padding-top: 20px;
+                padding-bottom: 20px;
+                spacing: 16px;
                 alignment: start;
 
                 HorizontalLayout {
@@ -272,22 +277,65 @@ export component EditPage inherits Rectangle {
                     }
                 }
 
-                HorizontalLayout {
-                    spacing: 20px;
-                    VerticalLayout {
-                        alignment: center;
-                        Image {
-                            source: @image-url("../assets/icon.png");
-                            width: 56px;
-                            height: 56px;
+                Columns {
+                    HorizontalLayout {
+                        width: root.half;
+                        spacing: 16px;
+                        VerticalLayout {
+                            alignment: start;
+                            padding-top: 4px;
+                            Image {
+                                source: @image-url("../assets/icon.png");
+                                width: 56px;
+                                height: 56px;
+                            }
+                        }
+                        Field {
+                            caption: "NAME";
+                            name-field := TextField {
+                                text: Store.profile.name;
+                                placeholder: "EkipaCraft";
+                                invalid: self.text == "";
+                            }
                         }
                     }
                     Field {
-                        caption: "NAME";
-                        name-field := TextField {
-                            text: Store.profile.name;
-                            placeholder: "EkipaCraft";
-                            invalid: self.text == "";
+                        width: root.half;
+                        caption: "RESOLUTION";
+                        HorizontalLayout {
+                            spacing: 10px;
+                            alignment: start;
+                            width-field := TextField {
+                                width: 88px;
+                                horizontal-stretch: 0;
+                                text: Store.profile.width > 0 ? Store.profile.width : "";
+                                placeholder: "Auto";
+                                input-type: InputType.number;
+                                invalid: !root.width-ok;
+                            }
+                            Text {
+                                text: "×";
+                                color: Theme.text-dim;
+                                font-size: 16px;
+                                vertical-alignment: center;
+                            }
+                            height-field := TextField {
+                                width: 88px;
+                                horizontal-stretch: 0;
+                                text: Store.profile.height > 0 ? Store.profile.height : "";
+                                placeholder: "Auto";
+                                input-type: InputType.number;
+                                invalid: !root.height-ok;
+                            }
+                            Rectangle { width: 8px; }
+                            fullscreen := CheckBox {
+                                text: "Fullscreen";
+                                checked: Store.profile.fullscreen;
+                            }
+                        }
+                        Hint {
+                            text: root.resolution-ok ? "Window size in pixels. Empty means default." : "Enter both width and height, or neither.";
+                            color: root.resolution-ok ? Theme.text-dim : Theme.danger;
                         }
                     }
                 }
@@ -326,93 +374,58 @@ export component EditPage inherits Rectangle {
                     }
                 }
 
-                Columns {
-                    Field {
-                        width: root.half;
-                        caption: "RESOLUTION";
-                        HorizontalLayout {
-                            spacing: 10px;
-                            alignment: start;
-                            width-field := TextField {
-                                width: 88px;
-                                horizontal-stretch: 0;
-                                text: Store.profile.width > 0 ? Store.profile.width : "";
-                                placeholder: "Auto";
-                                input-type: InputType.number;
-                                alignment: TextHorizontalAlignment.center;
-                                invalid: !root.width-ok;
-                            }
-                            Text {
-                                text: "×";
-                                color: Theme.text-dim;
-                                font-size: 16px;
-                                vertical-alignment: center;
-                            }
-                            height-field := TextField {
-                                width: 88px;
-                                horizontal-stretch: 0;
-                                text: Store.profile.height > 0 ? Store.profile.height : "";
-                                placeholder: "Auto";
-                                input-type: InputType.number;
-                                alignment: TextHorizontalAlignment.center;
-                                invalid: !root.height-ok;
-                            }
-                            Rectangle { width: 8px; }
-                            fullscreen := CheckBox {
-                                text: "Fullscreen";
-                                checked: Store.profile.fullscreen;
-                            }
-                        }
-                        Hint {
-                            text: root.resolution-ok ? "Window size in pixels. Empty means default." : "Enter both width and height, or neither.";
-                            color: root.resolution-ok ? Theme.text-dim : Theme.danger;
-                        }
+                // Section break: the options below tune Java, not the game.
+                HorizontalLayout {
+                    spacing: 12px;
+                    padding-top: 4px;
+                    Text {
+                        text: "JAVA & PERFORMANCE";
+                        color: Theme.green-text;
+                        font-size: 12px;
+                        font-weight: 700;
+                        letter-spacing: 0.6px;
+                        vertical-alignment: center;
                     }
-                    Field {
-                        width: root.half;
-                        caption: "MEMORY";
-                        HorizontalLayout {
-                            spacing: 16px;
-                            Slider {
-                                // Match the text fields so the hints line up.
-                                min-height: 40px;
-                                minimum: Store.min-ram-gb;
-                                maximum: Store.max-ram-gb;
-                                value: root.ram;
-                                changed(value) => { root.ram = value; }
-                            }
-                            Text {
-                                text: root.ram + " GB";
-                                color: Theme.text;
-                                font-size: 15px;
-                                font-weight: 700;
-                                min-width: 52px;
-                                horizontal-alignment: right;
-                                vertical-alignment: center;
-                            }
-                        }
-                        HorizontalLayout {
-                            Hint {
-                                text: Store.min-ram-gb + " GB";
-                                horizontal-stretch: 0;
-                            }
-                            Hint {
-                                text: "8 to 10 GB recommended";
-                                horizontal-alignment: center;
-                                horizontal-stretch: 1;
-                            }
-                            Hint {
-                                text: Store.max-ram-gb + " GB";
-                                horizontal-stretch: 0;
-                                horizontal-alignment: right;
-                            }
-                            // Keeps the max label under the slider's end, not the value.
-                            Rectangle { width: 68px; }
-                        }
+                    Rectangle {
+                        height: 1px;
+                        y: (parent.height - self.height) / 2;
+                        background: Theme.divider;
                     }
                 }
 
                 Columns {
+                    VerticalLayout {
+                        width: root.half;
+                        spacing: 8px;
+                        HorizontalLayout {
+                            Caption {
+                                text: "MEMORY  ·  8 TO 10 GB RECOMMENDED";
+                            }
+                            Text {
+                                text: root.ram + " GB";
+                                color: Theme.text;
+                                font-size: 13px;
+                                font-weight: 700;
+                                horizontal-alignment: right;
+                            }
+                        }
+                        Slider {
+                            min-height: 40px;
+                            minimum: Store.min-ram-gb;
+                            maximum: Store.max-ram-gb;
+                            value: root.ram;
+                            changed(value) => { root.ram = value; }
+                        }
+                        HorizontalLayout {
+                            Hint {
+                                text: Store.min-ram-gb + " GB";
+                            }
+                            Hint {
+                                text: Store.max-ram-gb + " GB";
+                                horizontal-alignment: right;
+                            }
+                        }
+                    }
                     Field {
                         width: root.half;
                         caption: "JAVA EXECUTABLE";
@@ -424,16 +437,13 @@ export component EditPage inherits Rectangle {
                             text: "Full path to java, or empty for the bundled one.";
                         }
                     }
-                    Field {
-                        width: root.half;
-                        caption: "JVM ARGUMENTS";
-                        jvm-field := TextField {
-                            text: Store.profile.jvm-args;
-                            placeholder: "-XX:+UseG1GC -XX:MaxGCPauseMillis=50";
-                        }
-                        Hint {
-                            text: "Added after the memory setting.";
-                        }
+                }
+
+                Field {
+                    caption: "JVM ARGUMENTS";
+                    jvm-field := TextField {
+                        text: Store.profile.jvm-args;
+                        placeholder: "-XX:+UseG1GC -XX:MaxGCPauseMillis=50";
                     }
                 }
             }
@@ -545,6 +555,7 @@ export component SettingsPage inherits Rectangle {
                     }
                     Button {
                         text: Store.nick == "" ? "Set nickname" : "Change";
+                        width: 120px;
                         icon: Icons.pencil;
                         clicked => { Store.nick-open = true; }
                     }
@@ -577,6 +588,7 @@ export component SettingsPage inherits Rectangle {
                     }
                     Button {
                         text: "Open";
+                        width: 120px;
                         icon: Icons.folder;
                         clicked => { Store.open-game-dir(); }
                     }
