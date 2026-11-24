@@ -482,7 +482,7 @@ export component EditPage inherits Rectangle {
 
 component Section inherits VerticalLayout {
     in property <string> title;
-    spacing: 14px;
+    spacing: 10px;
     Text {
         text: root.title;
         color: Theme.text;
@@ -492,10 +492,12 @@ component Section inherits VerticalLayout {
     @children
 }
 
+// Label and value; rows are 40px so ones with a button keep the rhythm.
 component InfoRow inherits HorizontalLayout {
     in property <string> label;
     in property <string> value;
     spacing: 16px;
+    min-height: 40px;
     horizontal-stretch: 1;
     Text {
         text: root.label;
@@ -523,6 +525,8 @@ export component SettingsPage inherits Rectangle {
     ScrollView {
         VerticalLayout {
             padding: 32px;
+            // Keep a readable line length; actions stay near their labels.
+            padding-right: max(32px, root.width - 32px - 720px);
             spacing: 28px;
             alignment: start;
 

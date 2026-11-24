@@ -60,7 +60,7 @@ export component Sidebar inherits Rectangle {
         // Account
         // As tall as the page header so the two dividers line up.
         account := Rectangle {
-            height: 104px;
+            height: 103px;
             background: account-touch.has-hover ? #252525 : transparent;
             HorizontalLayout {
                 padding-left: 16px;
@@ -101,9 +101,10 @@ export component Sidebar inherits Rectangle {
             }
         }
 
+        // Same seam as the page header's bottom border.
         Rectangle {
             height: 1px;
-            background: Theme.divider;
+            background: #00000060;
         }
 
         // The one game this launcher plays.
@@ -239,6 +240,7 @@ export component PageHeader inherits Rectangle {
         padding-right: 32px;
         padding-top: 22px;
         spacing: 10px;
+        alignment: start;
         Text {
             text: root.title;
             color: Theme.text;

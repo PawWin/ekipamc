@@ -1,8 +1,27 @@
 // Modal dialogs drawn over the whole window.
 
 import { Theme, Icons } from "theme.slint";
-import { Store, Screen } from "store.slint";
-import { Icon, Hint, Button, TextField, Avatar } from "widgets.slint";
+import { Store } from "store.slint";
+import { Icon, Hint, Button, TextField } from "widgets.slint";
+
+// Compact close button, flush with the dialog's right content edge.
+component CloseButton inherits Rectangle {
+    callback clicked;
+    width: 28px;
+    height: 28px;
+    border-radius: 3px;
+    background: touch.pressed ? #ffffff10 : touch.has-hover ? #ffffff18 : transparent;
+    Icon {
+        outline: Icons.close;
+        color: Theme.text-muted;
+        width: 18px;
+        height: 18px;
+    }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
 
 component Modal inherits Rectangle {
     in property <string> title;
@@ -30,7 +49,7 @@ component Modal inherits Rectangle {
             // Fixed height so titles sit at the same offset with or without
             // the close button.
             HorizontalLayout {
-                height: 40px;
+                height: 32px;
                 Text {
                     horizontal-stretch: 1;
                     text: root.title;
@@ -39,9 +58,8 @@ component Modal inherits Rectangle {
                     font-weight: 700;
                     vertical-alignment: center;
                 }
-                if root.closable: Button {
-                    icon: Icons.close;
-                    flat: true;
+                if root.closable: CloseButton {
+                    y: (parent.height - self.height) / 2;
                     clicked => { root.close(); }
                 }
             }
@@ -69,19 +87,24 @@ export component NickDialog inherits Modal {
             ? "This is your name on the server. The launcher remembers it, and the download keeps going while you choose."
             : "Your inventory belongs to your nickname. A new nickname starts with an empty inventory.";
     }
-    field := TextField {
-        text: Store.nick;
-        placeholder: "Nickname";
-        invalid: self.text != "" && !Store.nick-valid(self.text);
-        accepted => { root.submit(); }
-    }
-    Hint {
-        text: "3-16 characters: letters, digits and underscores";
-        color: field.text == "" || Store.nick-valid(field.text) ? Theme.text-dim : Theme.danger;
+    // Field and its rule hint sit together, like the editor's fields.
+    VerticalLayout {
+        spacing: 8px;
+        field := TextField {
+            text: Store.nick;
+            placeholder: "Nickname";
+            invalid: self.text != "" && !Store.nick-valid(self.text);
+            accepted => { root.submit(); }
+        }
+        Hint {
+            text: "3-16 characters: letters, digits and underscores";
+            color: field.text == "" || Store.nick-valid(field.text) ? Theme.text-dim : Theme.danger;
+        }
     }
     HorizontalLayout {
         spacing: 10px;
         alignment: end;
+        padding-top: 4px;
         if Store.nick != "": Button {
             text: "Cancel";
             clicked => { Store.nick-open = false; }
@@ -109,6 +132,7 @@ export component ErrorDialog inherits Modal {
     HorizontalLayout {
         spacing: 10px;
         alignment: end;
+        padding-top: 4px;
         Button {
             text: "Open logs folder";
             icon: Icons.folder;
