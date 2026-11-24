@@ -1,0 +1,18 @@
+# Baked into the launcher at compile time: rebuild after editing.
+
+# Name of the data directory (~/.local/share/<id> on Linux, %APPDATA%\<id> on Windows).
+id = "ekipamc"
+name = "EkipaMC"
+subtitle = "All the Mods 10"
+
+minecraft = "1.21.1"
+# Must match the NeoForge version the modpack was made for
+# (see "neoforge-..." in the CurseForge manifest.json of the ATM10 release).
+neoforge = "21.1.267"
+
+# The hosted modpack zip. Leave this section out to launch plain NeoForge.
+# The zip holds the instance folders at its root: mods/, config/, defaultconfigs/, kubejs/, ...
+# [modpack]
+# version = "atm10-5.0"
+# url = "https://example.com/ekipamc/atm10-5.0.zip"
+# sha256 = "<output of: sha256sum atm10-5.0.zip>"
