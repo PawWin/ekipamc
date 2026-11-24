@@ -29,6 +29,8 @@ struct Launcher {
 pub fn run() -> Result<()> {
     let config = &*CONFIG;
     let paths = Paths::new(&config.id)?;
+    // Best effort: if it fails, the default pack is just downloaded again.
+    paths.move_legacy_instance(&config.default_pack().id).ok();
     let mut saved = Settings::load(&paths.settings(), config);
     if !settings::is_valid_nick(&saved.nick) {
         saved.nick.clear();

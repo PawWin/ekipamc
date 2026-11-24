@@ -34,7 +34,7 @@ Accounts are offline-mode. The nick becomes the player name, and the UUID is the
 | Linux   | `~/.local/share/ekipamc`           |
 | Windows | `%APPDATA%\ekipamc`                |
 
-Java, libraries and assets are shared by every pack. Each pack's game directory (mods, saves, options, screenshots) is `instances/<pack id>/` inside it, so packs never mix mods. Installations of the same pack share that folder unless one is given its own. If the game crashes, the launcher tells the player to send `logs/game-output.log`.
+Java, libraries and assets are shared by every pack. Each pack's game directory (mods, saves, options, screenshots) is `instances/<pack id>/` inside it, so packs never mix mods. Installations of the same pack share that folder unless one is given its own. Launchers before v0.2 used `instance/`; on start it is moved to `instances/<default pack id>/`, and the old single installation's settings carry over. If the game crashes, the launcher tells the player to send `logs/game-output.log`.
 
 ## Setting up a season
 

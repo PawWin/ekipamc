@@ -17,6 +17,10 @@ pub struct Settings {
     pub profiles: Vec<Profile>,
     /// Index into `profiles` of the installation Play starts.
     pub selected: usize,
+    /// The single installation v0.1 saved; `fit` turns it into the first
+    /// profile and it is never written back.
+    #[serde(rename = "profile", skip_serializing)]
+    legacy_profile: Option<Profile>,
 }
 
 /// An installation, editable like a profile in the vanilla launcher. Its
@@ -104,14 +108,22 @@ impl Settings {
     }
 
     /// Drops installations of packs no longer in pack.toml, adds the
-    /// default one when none are left and keeps `selected` in range.
+    /// default one when none are left (carrying over a v0.1 profile, which
+    /// always played the default pack) and keeps `selected` in range.
     fn fit(&mut self, config: &Config) {
         let selected = self.profiles.get(self.selected).cloned();
         self.profiles
             .retain(|profile| config.pack(&profile.pack).is_some());
+        let legacy = self.legacy_profile.take();
         if self.profiles.is_empty() {
-            self.profiles
-                .push(Profile::new("EkipaCraft", config.default_pack()));
+            let default = config.default_pack();
+            self.profiles.push(match legacy {
+                Some(legacy) => Profile {
+                    pack: default.id.clone(),
+                    ..legacy
+                },
+                None => Profile::new("EkipaCraft", default),
+            });
         }
         self.selected = selected
             .and_then(|selected| self.profiles.iter().position(|p| *p == selected))
@@ -170,6 +182,7 @@ mod tests {
                 },
             ],
             selected: 1,
+            ..Settings::default()
         };
         settings.save(&path).unwrap();
         let loaded = Settings::load(&path, config);
@@ -200,5 +213,23 @@ mod tests {
         empty.fit(config);
         assert_eq!(empty.profiles.len(), 1);
         assert_eq!(empty.profile().pack, config.default_pack().id);
+    }
+
+    #[test]
+    fn v0_1_profile_becomes_the_default_installation() {
+        let config = &*crate::pack::CONFIG;
+        let path = std::env::temp_dir().join(format!("ekipamc-legacy-{}.toml", std::process::id()));
+        std::fs::write(
+            &path,
+            "nick = \"Steve\"\n[profile]\nname = \"Mine\"\nram_gb = 12\n",
+        )
+        .unwrap();
+        let loaded = Settings::load(&path, config);
+        std::fs::remove_file(&path).ok();
+        assert_eq!(loaded.profiles.len(), 1);
+        assert_eq!(loaded.profile().name, "Mine");
+        assert_eq!(loaded.profile().ram_gb, 12);
+        assert_eq!(loaded.profile().pack, config.default_pack().id);
+        assert!(!toml::to_string(&loaded).unwrap().contains("[profile]"));
     }
 }

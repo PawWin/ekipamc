@@ -23,6 +23,21 @@ impl Paths {
         Ok(Self { root })
     }
 
+    /// v0.1 kept its only installation, always the default pack, in
+    /// `instance/`. Moves it to that pack's folder so players keep their
+    /// worlds and skip the modpack download. Does nothing after the move
+    /// or on a fresh install.
+    pub fn move_legacy_instance(&self, default_pack_id: &str) -> Result<()> {
+        let legacy = self.root.join("instance");
+        let target = self.default_game_dir(default_pack_id);
+        if legacy.is_dir() && !target.exists() {
+            ensure_parent(&target)?;
+            std::fs::rename(&legacy, &target)
+                .with_context(|| format!("cannot move {}", legacy.display()))?;
+        }
+        Ok(())
+    }
+
     /// Where a pack's game runs unless the profile picks another directory.
     pub fn default_game_dir(&self, pack_id: &str) -> PathBuf {
         self.root.join("instances").join(pack_id)
@@ -83,4 +98,26 @@ pub fn ensure_parent(path: &Path) -> Result<()> {
             .with_context(|| format!("cannot create {}", parent.display()))?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn legacy_instance_moves_to_default_pack() {
+        let root = std::env::temp_dir().join(format!("ekipamc-paths-{}", std::process::id()));
+        let paths = Paths { root: root.clone() };
+        std::fs::create_dir_all(root.join("instance/mods")).unwrap();
+
+        paths.move_legacy_instance("atm10").unwrap();
+        let moved = paths.default_game_dir("atm10");
+        assert!(moved.join("mods").is_dir());
+        assert!(!root.join("instance").exists());
+
+        // A later start finds nothing to move.
+        paths.move_legacy_instance("atm10").unwrap();
+        assert!(moved.join("mods").is_dir());
+        std::fs::remove_dir_all(&root).ok();
+    }
 }
