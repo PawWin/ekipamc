@@ -1,244 +1,41 @@
-import { Button, LineEdit, ProgressIndicator, Slider } from "std-widgets.slint";
+// The launcher window, laid out like the official Minecraft launcher:
+// sidebar on the left, page header with tabs, page body, bottom Play bar.
 
-export enum Screen { installing, error, nick, ready, running }
+import { Theme } from "theme.slint";
+import { Store, Screen, Page, Profile, LauncherOptions } from "store.slint";
+import { Sidebar, PageHeader, BottomBar } from "chrome.slint";
+import { PlayPage, InstallationsPage, EditPage, SettingsPage } from "pages.slint";
+import { NickDialog, ErrorDialog } from "dialogs.slint";
 
-component Card inherits Rectangle {
-    background: #161b22;
-    border-radius: 12px;
-    border-width: 1px;
-    border-color: #262d36;
-}
-
-component Muted inherits Text {
-    color: #8b949e;
-    font-size: 13px;
-    wrap: word-wrap;
-}
-
-component PlayButton inherits Rectangle {
-    in property <string> text;
-    in property <bool> enabled: true;
-    callback clicked;
-
-    height: 56px;
-    border-radius: 10px;
-    background: !root.enabled ? #2d333b : touch.pressed ? #0b7d72 : touch.has-hover ? #12b0a1 : #0d9488;
-    animate background { duration: 120ms; }
-
-    Text {
-        text: root.text;
-        color: root.enabled ? white : #6e7681;
-        font-size: 20px;
-        font-weight: 700;
-        letter-spacing: 2px;
-    }
-
-    touch := TouchArea {
-        enabled: root.enabled;
-        mouse-cursor: root.enabled ? pointer : default;
-        clicked => { root.clicked(); }
-    }
-}
+export { Store, Screen, Page, Profile, LauncherOptions }
 
 export component AppWindow inherits Window {
-    title: root.pack-name;
+    title: Store.launcher-name;
     icon: @image-url("../assets/icon.png");
-    preferred-width: 720px;
-    preferred-height: 440px;
-    min-width: 560px;
-    min-height: 400px;
-    background: #0d1117;
+    preferred-width: 1120px;
+    preferred-height: 700px;
+    min-width: 940px;
+    min-height: 600px;
+    background: Theme.content;
+    default-font-family: Theme.font;
 
-    // Baked pack info.
-    in property <string> pack-name;
-    in property <string> pack-subtitle;
-    in property <string> pack-versions;
-
-    in-out property <Screen> screen: Screen.installing;
-
-    // Install progress; fraction < 0 means indeterminate.
-    in property <string> stage;
-    in property <string> detail;
-    in property <float> fraction: -1;
-    in property <string> error-message;
-
-    in-out property <string> nick;
-    in-out property <int> ram-gb: 8;
-    in property <int> min-ram-gb: 4;
-    in property <int> max-ram-gb: 16;
-
-    pure callback nick-valid(string) -> bool;
-    callback retry();
-    callback save-nick(string);
-    callback play();
-    callback open-folder();
-
-    VerticalLayout {
-        padding: 32px;
-        spacing: 24px;
-        alignment: center;
-
-        // Header
-        HorizontalLayout {
-            spacing: 16px;
-            Image {
-                source: @image-url("../assets/icon.png");
-                width: 56px;
-                height: 56px;
+    HorizontalLayout {
+        Sidebar { }
+        VerticalLayout {
+            PageHeader {
+                title: Store.page == Page.settings ? "LAUNCHER SETTINGS" : Store.pack-subtitle.to-uppercase();
+                tabs: Store.page != Page.settings;
+                note: "Changes are saved automatically";
             }
-            VerticalLayout {
-                alignment: center;
-                spacing: 2px;
-                Text {
-                    text: root.pack-name;
-                    color: white;
-                    font-size: 28px;
-                    font-weight: 800;
-                }
-                Muted {
-                    text: root.pack-subtitle + "  ·  " + root.pack-versions;
-                }
-            }
-        }
-
-        Card {
-            VerticalLayout {
-                padding: 28px;
-                spacing: 16px;
-                alignment: center;
-
-                if root.screen == Screen.installing: VerticalLayout {
-                    spacing: 12px;
-                    Text {
-                        text: root.stage;
-                        color: white;
-                        font-size: 18px;
-                        font-weight: 600;
-                    }
-                    ProgressIndicator {
-                        height: 8px;
-                        indeterminate: root.fraction < 0;
-                        progress: max(root.fraction, 0);
-                    }
-                    Muted {
-                        text: root.detail;
-                    }
-                    Muted {
-                        text: "The first start downloads a few gigabytes. Later starts are quick.";
-                    }
-                }
-
-                if root.screen == Screen.error: VerticalLayout {
-                    spacing: 12px;
-                    Text {
-                        text: "Something went wrong";
-                        color: #f85149;
-                        font-size: 18px;
-                        font-weight: 600;
-                    }
-                    Muted {
-                        text: root.error-message;
-                    }
-                    HorizontalLayout {
-                        spacing: 8px;
-                        alignment: start;
-                        Button {
-                            text: "Try again";
-                            primary: true;
-                            clicked => { root.retry(); }
-                        }
-                        Button {
-                            text: "Open game folder";
-                            clicked => { root.open-folder(); }
-                        }
-                    }
-                }
-
-                if root.screen == Screen.nick: VerticalLayout {
-                    spacing: 12px;
-                    Text {
-                        text: "Choose your nickname";
-                        color: white;
-                        font-size: 18px;
-                        font-weight: 600;
-                    }
-                    Muted {
-                        text: "This is your name on the server. Pick the same one every time to keep your inventory.";
-                    }
-                    nick-input := LineEdit {
-                        text: root.nick;
-                        placeholder-text: "Nickname";
-                        accepted => {
-                            if root.nick-valid(self.text) { root.save-nick(self.text); }
-                        }
-                    }
-                    Muted {
-                        text: "3-16 characters: letters, digits and _";
-                        color: nick-input.text == "" || root.nick-valid(nick-input.text) ? #8b949e : #f85149;
-                    }
-                    HorizontalLayout {
-                        alignment: end;
-                        Button {
-                            text: "Continue";
-                            primary: true;
-                            enabled: root.nick-valid(nick-input.text);
-                            clicked => { root.save-nick(nick-input.text); }
-                        }
-                    }
-                }
-
-                if root.screen == Screen.ready || root.screen == Screen.running: VerticalLayout {
-                    spacing: 20px;
-                    HorizontalLayout {
-                        spacing: 8px;
-                        Muted {
-                            text: "Playing as";
-                            vertical-alignment: center;
-                            horizontal-stretch: 0;
-                        }
-                        Text {
-                            text: root.nick;
-                            color: white;
-                            font-size: 16px;
-                            font-weight: 600;
-                            vertical-alignment: center;
-                        }
-                        Rectangle { }
-                        Button {
-                            text: "Change";
-                            enabled: root.screen == Screen.ready;
-                            clicked => { root.screen = Screen.nick; }
-                        }
-                    }
-                    HorizontalLayout {
-                        spacing: 12px;
-                        Muted {
-                            text: "Memory";
-                            vertical-alignment: center;
-                            horizontal-stretch: 0;
-                        }
-                        Slider {
-                            minimum: root.min-ram-gb;
-                            maximum: root.max-ram-gb;
-                            step: 1;
-                            value: root.ram-gb;
-                            enabled: root.screen == Screen.ready;
-                            changed(value) => { root.ram-gb = round(value); }
-                        }
-                        Text {
-                            text: root.ram-gb + " GB";
-                            color: white;
-                            vertical-alignment: center;
-                            min-width: 48px;
-                        }
-                    }
-                    PlayButton {
-                        text: root.screen == Screen.running ? "GAME RUNNING" : "PLAY";
-                        enabled: root.screen == Screen.ready;
-                        clicked => { root.play(); }
-                    }
-                }
-            }
+            if Store.page == Page.play: PlayPage { }
+            if Store.page == Page.installations: InstallationsPage { }
+            if Store.page == Page.edit: EditPage { }
+            if Store.page == Page.settings: SettingsPage { }
+            // Like the official launcher, only the Play tab has the Play bar.
+            if Store.page == Page.play: BottomBar { }
         }
     }
+
+    if Store.nick-open: NickDialog { }
+    if Store.error-open: ErrorDialog { }
 }

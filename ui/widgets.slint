@@ -1,0 +1,340 @@
+// Launcher-styled controls. Std widgets don't match the Minecraft launcher
+// look, so the few we need are drawn here.
+
+import { Theme, Icons } from "theme.slint";
+
+// Stroked 24x24 outline from `Icons`.
+export component Icon inherits Path {
+    in property <string> outline;
+    in property <brush> color: Theme.text;
+    commands: root.outline;
+    viewbox-width: 24;
+    viewbox-height: 24;
+    stroke: root.color;
+    stroke-width: 2px;
+    stroke-line-cap: round;
+    width: 20px;
+    height: 20px;
+}
+
+// Uppercase field caption, as above the vanilla launcher's form fields.
+export component Caption inherits Text {
+    color: Theme.text-muted;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+}
+
+export component Hint inherits Text {
+    color: Theme.text-dim;
+    font-size: 13px;
+    wrap: word-wrap;
+}
+
+// Launcher button. `primary` makes it green with the raised bottom edge of
+// the Play button; secondary buttons are flat. `flat` drops the fill until
+// hovered.
+export component Button inherits Rectangle {
+    in property <string> text;
+    in property <string> icon;
+    in property <bool> primary;
+    in property <bool> flat;
+    in property <bool> enabled: true;
+    in property <length> font-size: 14px;
+    callback clicked;
+
+    min-height: 40px;
+    max-height: 40px;
+    min-width: 40px;
+    horizontal-stretch: 0;
+    border-radius: 3px;
+    background: !root.enabled ? (root.primary ? Theme.green.transparentize(0.7) : #353535)
+        : root.flat ? (touch.pressed ? #ffffff10 : touch.has-hover ? #ffffff18 : transparent)
+        : root.primary ? (touch.pressed ? Theme.green-pressed : touch.has-hover ? Theme.green-hover : Theme.green)
+        : (touch.pressed ? Theme.button-pressed : touch.has-hover ? Theme.button-hover : Theme.button);
+    animate background { duration: 100ms; }
+
+    // Bottom edge, flattened while pressed.
+    Rectangle {
+        y: parent.height - self.height;
+        height: touch.pressed || !root.enabled || !root.primary ? 0px : 3px;
+        background: root.primary ? Theme.green-edge : Theme.button-edge;
+        border-bottom-left-radius: 3px;
+        border-bottom-right-radius: 3px;
+    }
+
+    HorizontalLayout {
+        padding-left: root.text == "" ? 9px : 16px;
+        padding-right: root.text == "" ? 9px : 16px;
+        // Room for the bottom edge only while it is drawn.
+        padding-bottom: touch.pressed || !root.enabled || !root.primary ? 0px : 3px;
+        spacing: 8px;
+        alignment: center;
+        if root.icon != "": Icon {
+            outline: root.icon;
+            color: root.enabled ? Theme.text : #ffffff60;
+            y: (parent.height - self.height) / 2;
+        }
+        if root.text != "": Text {
+            text: root.text;
+            color: root.enabled ? Theme.text : #ffffff60;
+            font-size: root.font-size;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => { root.clicked(); }
+    }
+}
+
+// Single-line text input with a placeholder.
+export component TextField inherits Rectangle {
+    in-out property <string> text <=> input.text;
+    in property <string> placeholder;
+    in property <bool> read-only;
+    in property <bool> invalid;
+    in property <InputType> input-type: InputType.text;
+    in property <TextHorizontalAlignment> alignment: TextHorizontalAlignment.left;
+    callback accepted(string);
+    callback edited(string);
+    forward-focus: input;
+
+    public function select-all() {
+        input.select-all();
+    }
+
+    min-height: 40px;
+    min-width: 64px;
+    horizontal-stretch: 1;
+    border-radius: 3px;
+    background: root.read-only ? #222222 : Theme.field;
+    border-width: 2px;
+    border-color: root.invalid ? Theme.danger
+        : input.has-focus ? Theme.green-text
+        : touch.has-hover && !root.read-only ? #7a7a7a : Theme.field-border;
+    animate border-color { duration: 100ms; }
+
+    touch := TouchArea {
+        mouse-cursor: root.read-only ? MouseCursor.default : MouseCursor.text;
+        clicked => { input.focus(); }
+    }
+
+    Rectangle {
+        x: 12px;
+        width: parent.width - 24px;
+        clip: true;
+
+        if input.text == "": Text {
+            // Clear of the caret.
+            x: 3px;
+            width: parent.width - 3px;
+            height: 100%;
+            text: root.placeholder;
+            color: Theme.text-dim;
+            font-size: 14px;
+            vertical-alignment: center;
+            horizontal-alignment: root.alignment;
+            overflow: elide;
+        }
+
+        input := TextInput {
+            width: 100%;
+            height: 100%;
+            color: root.read-only ? Theme.text-muted : Theme.text;
+            font-size: 14px;
+            vertical-alignment: center;
+            horizontal-alignment: root.alignment;
+            single-line: true;
+            read-only: root.read-only;
+            input-type: root.input-type;
+            selection-background-color: Theme.green;
+            selection-foreground-color: Theme.text;
+            accepted => { root.accepted(self.text); }
+            edited => { root.edited(self.text); }
+        }
+    }
+}
+
+export component CheckBox inherits Rectangle {
+    in property <string> text;
+    in-out property <bool> checked;
+    in property <bool> enabled: true;
+    callback toggled(bool);
+
+    // Same height as fields and buttons so rows keep one rhythm.
+    min-height: 40px;
+
+    HorizontalLayout {
+        spacing: 12px;
+        alignment: start;
+        box := Rectangle {
+            width: 22px;
+            height: 22px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 3px;
+            border-width: 2px;
+            border-color: root.checked ? Theme.green : touch.has-hover ? #9a9a9a : Theme.field-border;
+            background: root.checked ? Theme.green : Theme.field;
+            animate background, border-color { duration: 100ms; }
+            if root.checked: Icon {
+                outline: Icons.check;
+                width: 16px;
+                height: 16px;
+                stroke-width: 2.5px;
+            }
+        }
+        Text {
+            text: root.text;
+            color: root.enabled ? Theme.text : Theme.text-dim;
+            font-size: 14px;
+            vertical-alignment: center;
+            wrap: word-wrap;
+        }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => {
+            root.checked = !root.checked;
+            root.toggled(root.checked);
+        }
+    }
+}
+
+// Integer slider with a green fill, snapping to whole steps.
+export component Slider inherits Rectangle {
+    in property <int> minimum;
+    in property <int> maximum;
+    in-out property <int> value;
+    in property <bool> enabled: true;
+    callback changed(int);
+
+    min-height: 28px;
+    min-width: 160px;
+    horizontal-stretch: 1;
+
+    property <float> ratio: (root.value - root.minimum) / max(1, root.maximum - root.minimum);
+    property <length> knob: 20px;
+
+    Rectangle {
+        y: (parent.height - self.height) / 2;
+        height: 6px;
+        border-radius: 3px;
+        background: #4a4a4a;
+    }
+
+    Rectangle {
+        x: 0;
+        y: (parent.height - self.height) / 2;
+        width: root.knob / 2 + (root.width - root.knob) * root.ratio;
+        height: 6px;
+        border-radius: 3px;
+        background: root.enabled ? Theme.green : #5a5a5a;
+    }
+
+    Rectangle {
+        x: (root.width - root.knob) * root.ratio;
+        y: (parent.height - self.height) / 2;
+        width: root.knob;
+        height: root.knob;
+        border-radius: root.knob / 2;
+        background: touch.pressed ? #d8d8d8 : white;
+        drop-shadow-blur: 4px;
+        drop-shadow-color: #00000080;
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        function seek() {
+            let fraction = clamp((self.mouse-x - root.knob / 2) / (root.width - root.knob), 0, 1);
+            let next = round(root.minimum + fraction * (root.maximum - root.minimum));
+            if next != root.value {
+                root.value = next;
+                root.changed(next);
+            }
+        }
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down {
+                self.seek();
+            }
+        }
+        moved => {
+            if self.pressed {
+                self.seek();
+            }
+        }
+    }
+}
+
+// Small outlined label, e.g. "DEFAULT". Kept dark so the green Play button
+// stays the only bright green on screen.
+export component Badge inherits Rectangle {
+    in property <string> text;
+    background: #1c1c1cd8;
+    border-width: 1px;
+    border-color: Theme.green-text;
+    border-radius: 2px;
+    HorizontalLayout {
+        padding-left: 7px;
+        padding-right: 7px;
+        padding-top: 2px;
+        padding-bottom: 2px;
+        Text {
+            text: root.text;
+            color: Theme.green-text;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.6px;
+        }
+    }
+}
+
+// Pixel face generated from the nick (see `src/ui/avatar.rs`).
+export component Avatar inherits Rectangle {
+    in property <image> face;
+    in property <length> size: 40px;
+    width: root.size;
+    height: root.size;
+    border-radius: 3px;
+    background: #3a3a3a;
+    clip: true;
+    Image {
+        source: root.face;
+        width: 100%;
+        height: 100%;
+        image-rendering: pixelated;
+    }
+}
+
+// Indeterminate or determinate progress bar.
+export component ProgressBar inherits Rectangle {
+    in property <float> fraction;
+    in property <bool> indeterminate;
+    height: 8px;
+    border-radius: 2px;
+    background: #3d3d3d;
+    clip: true;
+
+    if !root.indeterminate: Rectangle {
+        x: 0;
+        width: parent.width * clamp(root.fraction, 0, 1);
+        background: Theme.green;
+        border-radius: 2px;
+        animate width { duration: 200ms; }
+    }
+
+    if root.indeterminate: Rectangle {
+        // Offset so even a still frame shows the moving segment.
+        property <float> phase: mod(animation-tick() / 1400ms + 0.5, 1);
+        width: parent.width * 0.3;
+        x: parent.width * (phase * 1.3 - 0.3);
+        background: Theme.green;
+        border-radius: 2px;
+    }
+}

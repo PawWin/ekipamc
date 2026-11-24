@@ -1,0 +1,58 @@
+// Colors, fonts and icon outlines shared by every view. The palette follows
+// the dark theme of the official Minecraft launcher.
+
+import "../assets/fonts/NotoSans-Regular.ttf";
+import "../assets/fonts/NotoSans-SemiBold.ttf";
+import "../assets/fonts/NotoSans-Bold.ttf";
+import "../assets/fonts/Silkscreen-Bold.ttf";
+
+export global Theme {
+    out property <string> font: "Noto Sans";
+    // Blocky display face for titles and the Play button.
+    out property <string> display-font: "Silkscreen";
+
+    out property <color> sidebar: #1c1c1c;
+    out property <color> header: #2a2a2a;
+    out property <color> content: #262626;
+    out property <color> bar: #1f1f1f;
+    out property <color> card: #313131;
+    out property <color> card-hover: #3a3a3a;
+    out property <color> divider: #3c3c3c;
+    out property <color> selected: #383838;
+
+    out property <color> text: #ffffff;
+    out property <color> text-muted: #c4c4c4;
+    out property <color> text-dim: #a0a0a0;
+
+    out property <color> field: #1a1a1a;
+    out property <color> field-border: #5b5b5b;
+
+    out property <color> green: #3c8527;
+    out property <color> green-hover: #4b9e32;
+    out property <color> green-pressed: #2f6b1e;
+    out property <color> green-edge: #1d4d13;
+    out property <color> green-text: #6cc349;
+
+    out property <color> button: #48494a;
+    out property <color> button-hover: #58595a;
+    out property <color> button-pressed: #3a3b3c;
+    out property <color> button-edge: #313233;
+
+    out property <color> danger: #f0565c;
+}
+
+// 24x24 outlines, drawn with a 2px stroke by `Icon`.
+export global Icons {
+    out property <string> play: "M8 5 L8 19 L19 12 Z";
+    out property <string> folder: "M3 6.5 L3 18.5 L21 18.5 L21 8.5 L11.5 8.5 L9.5 6.5 Z";
+    out property <string> pencil: "M4 20 L8.5 19 L19.5 8 L16 4.5 L5 15.5 Z M14 6.5 L17.5 10";
+    out property <string> sliders: "M4 7 L20 7 M4 17 L20 17 M9 4 L9 10 M15 14 L15 20";
+    out property <string> check: "M5 12.5 L10 17.5 L19 7";
+    out property <string> close: "M6 6 L18 18 M18 6 L6 18";
+    out property <string> chevron-down: "M6 9 L12 15 L18 9";
+    out property <string> chevron-left: "M15 5 L8 12 L15 19";
+    out property <string> chevron-right: "M9 5 L16 12 L9 19";
+    out property <string> lock: "M6 11 L18 11 L18 20 L6 20 Z M8.5 11 L8.5 7.5 Q8.5 4 12 4 Q15.5 4 15.5 7.5 L15.5 11";
+    out property <string> file: "M6 3 L14.5 3 L19 7.5 L19 21 L6 21 Z M9.5 12 L15.5 12 M9.5 16 L15.5 16";
+    out property <string> alert: "M12 3.5 L22 20.5 L2 20.5 Z M12 9.5 L12 14 M12 16.5 L12 17.5";
+}

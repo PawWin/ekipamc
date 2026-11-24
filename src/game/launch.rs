@@ -4,17 +4,18 @@ use super::version::VersionJson;
 use crate::install::java;
 use crate::pack::Pack;
 use crate::paths::Paths;
-use crate::settings::Settings;
+use crate::settings::{Profile, Settings};
 use anyhow::{Context, Result};
 use md5::{Digest, Md5};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::process::{ExitStatus, Stdio};
+use std::process::Stdio;
+use tokio::process::Child;
 use uuid::Uuid;
 
-/// Starts the game and waits for it to exit. Game output goes to
-/// `logs/game-output.log` next to the launcher data.
-pub async fn run(paths: &Paths, pack: &Pack, settings: &Settings) -> Result<ExitStatus> {
+/// Starts the game; the caller waits on the returned process. Game output
+/// goes to `logs/game-output.log` next to the launcher data.
+pub fn start(paths: &Paths, pack: &Pack, settings: &Settings) -> Result<Child> {
     let version = VersionJson::resolve(&paths.versions(), &pack.version_id())?;
     let component = &version
         .java_version
@@ -25,15 +26,18 @@ pub async fn run(paths: &Paths, pack: &Pack, settings: &Settings) -> Result<Exit
 
     std::fs::create_dir_all(paths.logs())?;
     let log = std::fs::File::create(paths.logs().join("game-output.log"))?;
-    let mut child = java::command(&java::executable(paths, component))
+    let java = match &settings.profile.java_path {
+        Some(custom) => custom.clone(),
+        None => java::executable(paths, component),
+    };
+    java::command(&java)
         .args(&args)
         .current_dir(paths.instance())
         .stdin(Stdio::null())
         .stdout(log.try_clone()?)
         .stderr(log)
         .spawn()
-        .context("cannot start Java")?;
-    Ok(child.wait().await?)
+        .with_context(|| format!("cannot start Java ({})", java.display()))
 }
 
 /// JVM options, main class and game arguments, with every `${...}`
@@ -76,7 +80,7 @@ fn command_line(paths: &Paths, version: &VersionJson, settings: &Settings) -> Re
         ("launcher_version", env!("CARGO_PKG_VERSION").into()),
     ]);
 
-    let mut args = vec![format!("-Xmx{}G", settings.ram_gb)];
+    let mut args = vec![format!("-Xmx{}G", settings.profile.ram_gb)];
     if let Some(logging) = version
         .logging
         .as_ref()
@@ -93,6 +97,14 @@ fn command_line(paths: &Paths, version: &VersionJson, settings: &Settings) -> Re
             .flat_map(|arg| arg.values())
             .map(|arg| substitute(arg, &vars)),
     );
+    // After the version's own options so the player's can override them.
+    args.extend(
+        settings
+            .profile
+            .jvm_args
+            .split_whitespace()
+            .map(String::from),
+    );
     args.push(version.main_class.clone());
     args.extend(
         version
@@ -102,7 +114,27 @@ fn command_line(paths: &Paths, version: &VersionJson, settings: &Settings) -> Re
             .flat_map(|arg| arg.values())
             .map(|arg| substitute(arg, &vars)),
     );
+    args.extend(window_args(&settings.profile));
     Ok(args)
+}
+
+/// Game arguments for the profile's window options. Vanilla gates
+/// `--width`/`--height` behind the `has_custom_resolution` feature; adding
+/// them directly has the same effect.
+fn window_args(profile: &Profile) -> Vec<String> {
+    let mut args = Vec::new();
+    if let Some(resolution) = profile.resolution {
+        args.extend([
+            "--width".into(),
+            resolution.width.to_string(),
+            "--height".into(),
+            resolution.height.to_string(),
+        ]);
+    }
+    if profile.fullscreen {
+        args.push("--fullscreen".into());
+    }
+    args
 }
 
 /// Replaces `${name}` placeholders; unknown ones are left as-is.
@@ -146,6 +178,23 @@ mod tests {
             offline_uuid("Notch").to_string(),
             "b50ad385-829d-3141-a216-7e7d7539ba7f"
         );
+    }
+
+    #[test]
+    fn window_options_become_game_args() {
+        let profile = Profile {
+            fullscreen: true,
+            resolution: Some(crate::settings::Resolution {
+                width: 1280,
+                height: 720,
+            }),
+            ..Profile::default()
+        };
+        assert_eq!(
+            window_args(&profile),
+            ["--width", "1280", "--height", "720", "--fullscreen"]
+        );
+        assert!(window_args(&Profile::default()).is_empty());
     }
 
     #[test]

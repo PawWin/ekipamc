@@ -1,0 +1,226 @@
+// Modal dialogs drawn over the whole window.
+
+import { Theme, Icons } from "theme.slint";
+import { Store, Screen } from "store.slint";
+import { Icon, Hint, Button, TextField, ProgressBar } from "widgets.slint";
+
+// Compact close button, flush with the dialog's right content edge.
+component CloseButton inherits Rectangle {
+    callback clicked;
+    width: 28px;
+    height: 28px;
+    border-radius: 3px;
+    background: touch.pressed ? #ffffff10 : touch.has-hover ? #ffffff18 : transparent;
+    Icon {
+        outline: Icons.close;
+        color: Theme.text-muted;
+        width: 18px;
+        height: 18px;
+    }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+component Modal inherits Rectangle {
+    in property <string> title;
+    in property <color> title-color: Theme.text;
+    in property <bool> closable: true;
+    callback close;
+
+    background: #000000b0;
+    // Swallow clicks so the page underneath stays inert.
+    TouchArea { }
+
+    Rectangle {
+        width: 460px;
+        height: body.preferred-height;
+        border-radius: 6px;
+        background: Theme.card;
+        border-width: 1px;
+        border-color: #ffffff14;
+        drop-shadow-blur: 16px;
+        drop-shadow-color: #00000070;
+
+        body := VerticalLayout {
+            padding: 28px;
+            spacing: 16px;
+            // Fixed height so titles sit at the same offset with or without
+            // the close button.
+            HorizontalLayout {
+                height: 32px;
+                Text {
+                    horizontal-stretch: 1;
+                    text: root.title;
+                    color: root.title-color;
+                    font-size: 20px;
+                    font-weight: 700;
+                    vertical-alignment: center;
+                }
+                if root.closable: CloseButton {
+                    y: (parent.height - self.height) / 2;
+                    clicked => { root.close(); }
+                }
+            }
+            @children
+        }
+    }
+}
+
+export component NickDialog inherits Modal {
+    title: Store.nick == "" ? "Choose your nickname" : "Change nickname";
+    closable: Store.nick != "";
+    close => { Store.nick-open = false; }
+
+    function submit() {
+        if Store.nick-valid(field.text) {
+            Store.save-nick(field.text);
+            Store.nick-open = false;
+        }
+    }
+
+    init => {
+        field.focus();
+        field.select-all();
+    }
+
+    Hint {
+        text: Store.nick == ""
+            ? "This is your name on the server. The launcher remembers it, and the download keeps going while you choose."
+            : "Your inventory belongs to your nickname. A new nickname starts with an empty inventory.";
+    }
+    // Field and its rule hint sit together, like the editor's fields.
+    VerticalLayout {
+        spacing: 8px;
+        field := TextField {
+            text: Store.nick;
+            placeholder: "Nickname";
+            invalid: self.text != "" && !Store.nick-valid(self.text);
+            accepted => { root.submit(); }
+        }
+        Hint {
+            text: "3-16 characters: letters, digits and underscores";
+            color: field.text == "" || Store.nick-valid(field.text) ? Theme.text-dim : Theme.danger;
+        }
+    }
+    // The scrim hides the bottom bar, so first start mirrors the progress here.
+    if Store.screen == Screen.installing: Rectangle {
+        background: #262626;
+        border-radius: 3px;
+        VerticalLayout {
+            padding: 12px;
+            spacing: 8px;
+            HorizontalLayout {
+                Text {
+                    text: Store.stage;
+                    color: Theme.text;
+                    font-size: 13px;
+                    font-weight: 600;
+                    overflow: elide;
+                }
+                // Same grammar as the Play bar: percentage right, detail below.
+                Text {
+                    text: Store.fraction < 0 ? "" : round(Store.fraction * 100) + "%";
+                    color: Theme.green-text;
+                    font-size: 13px;
+                    font-weight: 600;
+                    horizontal-alignment: right;
+                }
+            }
+            ProgressBar {
+                height: 6px;
+                fraction: Store.fraction;
+                indeterminate: Store.fraction < 0;
+            }
+            if Store.detail != "": Text {
+                text: Store.detail;
+                color: Theme.text-dim;
+                font-size: 12px;
+                overflow: elide;
+            }
+        }
+    }
+    HorizontalLayout {
+        spacing: 10px;
+        alignment: end;
+        padding-top: 4px;
+        if Store.nick != "": Button {
+            text: "Cancel";
+            clicked => { Store.nick-open = false; }
+        }
+        Button {
+            text: "Save";
+            primary: true;
+            enabled: Store.nick-valid(field.text);
+            clicked => { root.submit(); }
+        }
+    }
+}
+
+export component ErrorDialog inherits Modal {
+    title: Store.error-file == "" ? "Something went wrong" : "Minecraft closed unexpectedly";
+    title-color: Theme.danger;
+    close => { Store.error-open = false; }
+
+    Text {
+        text: Store.error-message;
+        color: Theme.text-muted;
+        font-size: 14px;
+        wrap: word-wrap;
+    }
+    if Store.error-file != "": HorizontalLayout {
+        // The file to send; the exit status goes underneath, muted.
+        alignment: start;
+        Rectangle {
+            background: #1a1a1a;
+            border-radius: 3px;
+            border-width: 1px;
+            border-color: #ffffff1c;
+            HorizontalLayout {
+                padding: 8px;
+                padding-left: 10px;
+                padding-right: 12px;
+                spacing: 8px;
+                Icon {
+                    outline: Icons.file;
+                    color: Theme.text-muted;
+                    width: 16px;
+                    height: 16px;
+                    y: (parent.height - self.height) / 2;
+                }
+                Text {
+                    text: Store.error-file;
+                    color: Theme.text;
+                    font-size: 14px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+    if Store.error-detail != "": Text {
+        text: Store.error-detail;
+        color: Theme.text-dim;
+        font-size: 13px;
+        wrap: word-wrap;
+    }
+    HorizontalLayout {
+        spacing: 10px;
+        alignment: end;
+        padding-top: 4px;
+        Button {
+            text: "Open logs folder";
+            icon: Icons.folder;
+            clicked => { Store.open-logs-dir(); }
+        }
+        Button {
+            text: "Retry";
+            primary: true;
+            clicked => {
+                Store.error-open = false;
+                Store.retry();
+            }
+        }
+    }
+}
